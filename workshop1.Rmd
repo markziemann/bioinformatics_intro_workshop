@@ -463,3 +463,132 @@ Your other homework exercise is to write a new script that combines if statement
 loops.
 For example, you can use a for loop to generate and save a value of $RANDOM, then use an if
 statement to check whether it is larger than an arbitrary value like 20,000.
+
+## NCBI BLAST Example
+
+Now that we have done some introductory things, let's do some actual bioinformatics using
+the classic BLAST tool.
+
+<img src="images/BlastLogo.png" alt="drawing" width="300"/>
+
+We will begin by downloading the full *E. coli* genome, uncompressing the file and creating
+a BLAST index.
+
+```
+wget -N "ftp://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/dna/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz"
+
+gunzip -kf Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz
+
+makeblastdb -dbtype nucl -in Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa -input_type fasta -parse_seqids -title ecoli
+
+```
+
+Now that we have set up the DB, we will need a sequence to query.
+
+We will download the full set of *E. coli* coding sequences and select a few for running a
+BLAST.
+
+```
+wget -N "ftp://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/cds/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz"
+
+gunzip -kf Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz
+
+```
+
+We need to "unwrap" the fasta file.
+No I'm not expecting you to understand the perl command.
+
+```
+perl -pe '/^>/ ? print "\n" : chomp' \
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa \
+> Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.unwrap.fa
+
+```
+
+Use `head` to viaualise the contents of the unwrapped fasta file.
+
+Then sample the first 5 sequences to another file called `sample.fa`
+
+```
+sed 1d Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.unwrap.fa \
+| head > sample.fa
+
+```
+
+Now perform a BLASTN search.
+
+```
+blastn -evalue 0.001 \
+-db Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa \
+-query sample.fa
+
+```
+
+That's a lot of output.
+It is a good idea to save the results into a file and view it using `less`.
+
+The output is still very extensive.
+It would be convenient to obtain the results in the form of a summary table.
+
+```
+blastn -evalue 0.001 \
+-db Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa \
+-query sample.fa \
+-outfmt 6
+
+```
+
+That's great, but what are column names?
+
+Here's the [answer](https://www.metagenomics.wiki/tools/blast/blastn-output-format-6).
+
+`qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore`
+
+1.  qseqid      query or source (gene) sequence id
+
+2.  sseqid      subject or target (reference genome) sequence id
+
+3.  pident      percentage of identical positions
+
+4.  length      alignment length (sequence overlap)
+
+5.  mismatch    number of mismatches
+
+6.  gapopen     number of gap openings
+
+7.  qstart      start of alignment in query
+
+8.  qend        end of alignment in query
+
+9.  sstart      start of alignment in subject
+
+10.  send        end of alignment in subject
+
+11.  evalue      expect value
+
+12.  bitscore    bit score
+
+Can you interpret what the results mean?
+
+## Further exercise: determine the limits of BLASTN
+
+Point mutations (base substitutions) make it more difficult for BLAST to find the sequence in
+the genome.
+
+Point mutations can be simulated computationally using the `msbar` command of the `emboss`
+suite of tools.
+
+```
+msbar -sequence mysequence.fa -count 20 -point 4 -block 0 -codon 0 \
+-outseq /dev/stdout 2>/dev/null > mysequence_mutated.fa
+
+```
+
+Using your new found shell scripting skills, find out how many point mutations are required to
+stop BLAST from identifying the source gene AAC73113 in the genomic database.
+
+As the point mutations are random, you might need to repeat the sequence mutation and search
+many times.
+
+Warning: this is a surprisingly tricky task to do. We recommend working in groups.
+
