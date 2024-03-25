@@ -587,6 +587,7 @@ msbar -sequence mysequence.fa -count 20 -point 4 -block 0 -codon 0 \
 Using your new found shell scripting skills, find out how many point mutations are required to
 stop BLAST from identifying the source gene AAC73113 in the genomic database.
 
+Express the answer as a proportion of the length of the AAC73113 gene.
 As the point mutations are random, you might need to repeat the sequence mutation and search
 many times.
 
