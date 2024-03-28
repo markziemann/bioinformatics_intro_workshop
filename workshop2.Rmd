@@ -50,7 +50,10 @@ Can you think of some reasons why that would be preferred?
 
 ## Organising your projects
 
-What do you think is the best way to organise your bioinformatics project folders?
+What do you think is the best way to arrange your bioinformatics project folders?
+
+Where to put different files including input data, sample sheets, documentations, scripts,
+results?
 
 ## Data management
 
@@ -67,8 +70,6 @@ Let's take a look at the lifecycle of research project data.
 * Back-up
 
 * Storage, usage
-
-* Validate back-up
 
 * Disseminate
 
@@ -118,4 +119,252 @@ Sometimes, the actual IP address is required if the hostname isn't known.
 rsync -ahv mark.ziemann@10.11.10.158:/home/mark.ziemann/public/100507_R*.fq.gz .
 
 ```
+
+`rsync` is great because it checks the integrity of files, ensuring they aren't corrupted.
+It checks the original and destination md5 checksums.
+If the original and destination checksums are the same, then the file transfer is skipped.
+
+## Checking data
+
+It is a good idea to check your data integrity before analysing it.
+
+A simple approach is to check the size of a file:
+
+```
+du -sh 100507_R*.fq.gz
+
+```
+
+But this has a subtle problem that the same file on different file systems can occupy a
+different size.
+For example data on a Windows formatted external HDD might use different number of bytes as
+compared to a Linux drive.
+
+This is why checksums are important.
+They confirm the data in the file are the same or not.
+Every file or piece of data can generate a checksum or a type of fingerprint, which is very
+distinctive.
+Two different files having the same checksum are very rare.
+
+We can uset the `md5sum` command to obtain a checksum.
+
+```
+md5sum 100507_R*fq.gz
+
+```
+
+You can visually confirm the checksums if you only have a few files.
+
+```
+4037a30ff563c21f7ecaeeda1d3bd454  100507_R1.fq.gz
+3f632f0417bfc15c10aee50907aeb586  100507_R2.fq.gz
+
+```
+
+But if you have more, an automatic solution is probably better.
+
+Download the md5sums corresponding to the original files and check whether the newly created
+files are the same.
+
+```
+wget https://ziemann-lab.net/public/tmp/checksums.md5
+
+```
+
+Then run `md5sum` in "check" mode.
+
+```
+md5sum -c checksums.md5
+
+```
+
+It should say "OK" for both files.
+
+At this point you may want to run some further checks on the data, to validate that they
+conform to standards, as errors may have been incorporated at an early phase after data was
+collected.
+
+For FASTQ files like this, we can look at the read length, number of reads for both files,
+and check whether the file format conforms to FASTQ.
+
+We can't simply run `head` on these files as they are, because they have been compressed.
+Instead, try `zcat`
+
+```
+zcat 100507_R1.fq.gz | head
+
+```
+
+Get the read length using `sed`:
+
+```
+zcat 100507_R1.fq.gz | head | sed -n 2p
+zcat 100507_R1.fq.gz | head | sed -n 2p | wc
+
+```
+
+Get the number of reads using sed, only printing the 2nd line for each sequence record.
+Make sure both files have same read length.
+
+```
+zcat 100507_R1.fq.gz | head -20 | sed -n '2~4p'
+zcat 100507_R1.fq.gz | sed -n '2~4p' | wc -l
+
+```
+
+Can you write an `if` statement to check the read numbers are the same for both files?
+
+## Documenting data
+
+Every project should have a README.
+Let's discuss what it should contain.
+
+1. For a large omics project at the initial stage, what sort of information should go in it?
+
+2. How should the README change as a project moves from initial analysis towards publication?
+
+## Backing up data
+
+Which files should you back up or not?
+
+It is important to understand the computing environment you are working in.
+If you are working on a laptop, then that work probably isn't backed-up by default.
+The Burnet HPC filesystem undergoes regular backups, so you can work there knowing that if
+you lose data, you can request restoration of a snapshot (contact Shanon Loveridge or IT
+without delay).
+If you are working on a desktop computer, you may be able to work on a OneDrive file system,
+which is backed up.
+If you are using another drive on the PC, then you'll need to set up a backup.
+
+On a Linux system, you can schedule `rsync` to run at certain times, like 2am Saturday with
+`cron`.
+You can edit your scheduled tasks using `crontab -e`
+
+There are a plethora of [forums](https://unix.stackexchange.com/questions/392780/how-to-schedule-an-rsync-command) and other web resources on this, which I suggest you search
+independently, but your crontab entry might look like this:
+
+```
+0 2 * * SAT rsync -a src dest
+
+```
+
+Another important consideration is that you need to regularly check that the backup worked
+as expected, by checking log files and by trying to restore backed up files.
+
+## Storage and usage
+
+When it comes to actually doing your project, there is a risk that things go wrong and files
+get deleted or overwritten.
+
+This can be prevented by changing the permissions of files.
+Permissions refer to the ability for owners, group members and others to write, read and
+execute files and directories.
+
+To see the current permissions of files, use the `ls -l` command to get the whole contents
+of the folder or `ls -l file1 file2 fileN` for select files.
+
+The results will be tabular and the first column shows the permissions.
+
+For me, the code I see is `-rw-r--r--` which consists of 10 characters.
+Let's look at the role of each character:
+
+1. Directory or not?
+
+2. Owner can read?
+
+3. Owner can write?
+
+4. Owner can execute?
+
+5. Group members can read?
+
+6. Group members can write?
+
+7. Group members can execute?
+
+8. Others can read?
+
+9. Others can write?
+
+10. Others can execute?
+
+So the code I have indicated it is a normal file, not a directory, which is readable to
+everyone on the system, but only the owner (me) can write it.
+
+We can change permissions using `chmod`.
+
+```
+chmod 444 myfile # read only for everyone
+chmod 555 myscript # read and executable for everyone
+chmod 666 myfile # read and writable for everyone
+chmod 777 myfile # read, writable and executable for everyone
+chmod 644 myfile # read and write for me and read-only for everone else
+
+```
+
+Chmod 644 is probably the right permission if you are working alone, but if you are actively
+collaborating with others, you may need to share write permissions in the project user group,
+so 664 might be practical.
+
+Keep in mind that making read-only doesn't protect against some operations.
+For example you can still rename it or move it to another location, and deletion with
+`rm -f` will still work.
+
+To mititgate this, consider making files immutable using the `chattr` command.
+It may require `sudo`, so may not be that useful for the HPC cluster.
+
+```
+chattr +i myfile # set immutable
+lsattr -l myfile # check attributes
+chattr -i myfile # remove immutable flag
+
+```
+
+## Disseminate
+
+Data sharing is a key part of a successful research project.
+One tip I can give is to carefully consider when to share data.
+It may be in your benefit to share raw data it at an early stage, after the dataset is
+considered complete, especially if you can place the dataset under embargo until the
+corresponding paper gets published.
+It provides an external "back-up" and if the project ends up never being completed, the
+embargo period will end and the data will become public.
+
+## Closing a project
+
+Winding down a project can take a few phases, and the data management plan should be followed.
+Identify the data you want to keep forever; this should include management documents like
+ethics applications and decisions around authorship which should be part of your lab notebook
+and able to be accessed by the intitution already.
+Code should be considered a separate and special data form and will be stored permanently.
+Identify the files that can be safely deleted.
+This could include intermediate files which can be easily regenerated using the scripts.
+If the work was published more than 5 years ago and the raw data is deposited to a
+public repository, then it can be deleted.
+Update the README with information on how to reproduce the findings.
+
+## Version control
+
+Research projects are complicated things, typically involving many types of experiments, data,
+people and institutions.
+Research work is also very unpredictable, problems emerge all the time and we typically
+publish only a small fraction of the data/results we generate.
+
+[Itai Yanai: false directions are common in research](images/projectpath.png)
+
+If you have worked in a team sharing a common data and analysis folder, you will know that
+mistakes can happen with files and the codes can be lost.
+To avoid code loss we might even have multiple versions of a script in the folder with
+different names eg: myscript.sh, myscript2.sh, myscript2final.sh, etc.
+This issue is even worse for collaborations where the project folder is not shared and the
+researchers send eachother scripts and code over email or some other medium.
+In short, research project code can get messy very quickly, increasing the chance for
+mistakes.
+This is a prime reason why version control systems were developed.
+In particular, distributed version control has emerged as the industry standard for software
+development because each collaborator has their own copy of the repository and they
+contribute their changes to the main repository, from which the other contributors fetch the
+latest changes.
+
+![Distributed version control. (A) Each author has a copy of the repository where their contributions are committed before being pushed to the main central repository. (B) An example hypothetical git workflow history for a research project involving a team of three authors. Circles represent code commits. Path divergences create separate branches for independent development. Horizontal paths indicate code changes for a particular branch. Path convergences indicate where branch specific differences are incorporated into the main branch.](images/dvcs.png)
 
