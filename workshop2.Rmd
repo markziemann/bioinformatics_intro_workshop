@@ -505,6 +505,7 @@ you will make additional modifications.
 **9. Add team mates as collaborators**
 At the GitHub repo, under the "Settings" tab, you will see a side menu with "Collaborators".
 Add your lab head and team mates to this repo.
+You will need to know their alias or email address.
 
 **10. Try out GitHub's issues feature**
 Issues can include new work that needs to be done (ie: features), or problems that need to
@@ -517,12 +518,11 @@ Each issue has a number (eg: `#56`), which can be referred to in commit messages
 Tip: `git commit -m "close #56 with bugfix" && git push origin main` will close issue 
 `#56` automatically.
 
-
-
 The above steps are 90% of how researchers use git and GitHub.
 Naturally there are more advanced workflows for more complex projects that include
 many branches, automatic code testing, pull requests, etc.
-But you can learn that stuff later as you encounter such problems.
+But you can learn that stuff later as you encounter such problems or need to upgrade
+certain workflows.
 
 ## Using git with GitLab
 
@@ -530,6 +530,38 @@ Burnet has its own GitLab server to manage code.
 It is a good idea to use GitLab if you are dealing with sensitive data, have intellectual
 property concerns, or just want to keep your code away from large corporations.
 
-First step is to raise an IT ticket to enable access to
+First step is to raise an IT ticket to request access to GitLab.
+Follow those instructions to set up 2FA.
+Retain recovery codes in a safe place.
 
+Like above, the first step is to add an SSH key.
+Click on your personal icon and hit "Preferences", the side menu will show "SSH Keys".
+Add the public key, and then proceed to use the workflow above, by:
 
+1. Creating a new repository
+
+2. Cloning the repository
+
+3. Making some changes
+
+4. Adding, committing and pushing
+
+5. Adding collaborators
+
+6. Using issues to manage work items
+
+## Publishing code supporing your project
+
+The 10 year challenge has shown the difficulty of reproducing work over long timeframes.
+GitHub and GitLab may not exist in 10 years, due to the commercial viability of Microsoft
+and Burnet IT facilities.
+Therefore a more long-term repository is required:
+
+* [Zenodo](zenodo.org) is a scientific data repository with support from CERN whose stated
+goal is for >20 years of preservation.
+
+* [Software Heritage](https://www.softwareheritage.org/) is an organisation whose sole purpose
+is long term preservation of software, including research code.
+
+* [Arweave Network](https://www.arweave.org/) is an experimental distributed network that
+uses blockchain to incentivise permanent data storage.
