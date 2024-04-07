@@ -565,3 +565,11 @@ is long term preservation of software, including research code.
 
 * [Arweave Network](https://www.arweave.org/) is an experimental distributed network that
 uses blockchain to incentivise permanent data storage.
+
+## Homework
+
+Start a repo for a new project write some docs and start adding some codes.
+
+Learn how to use Markdown to make better documentation using a [cheatsheet](https://www.markdownguide.org/cheat-sheet/).
+
+Use the internet to find out what the README should contain for a data science project.
