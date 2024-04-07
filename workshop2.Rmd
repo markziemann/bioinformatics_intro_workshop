@@ -27,8 +27,14 @@ the institue as a whole.
 Do you know the minimum requirements for biomedical research data and code preservation in
 Australia?
 
+Let's take a look at the [NHMRC Management of Data and Information in Research guidelines](https://www.nhmrc.gov.au/sites/default/files/documents/attachments/Management-of-Data-and-Information-in-Research.pdf).
+
+We won't write up a plan in today's session, but it should be something you should address
+to remain in compliance with Burnet and funder guidelines.
+
 Reflect on your past work from 5 years ago and tell me whether it is compliant with mandates.
 
+Data management is also important for reproducibility.
 Is your past computational work reproducible?
 
 How do you think we can make our work more robust and reproducible?
@@ -44,6 +50,8 @@ Some relatively simple rules we can adopt to enhance reproducibility of our work
 * [Ten Simple Rules for Reproducible Computational Research](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1003285)
 
 * [Good enough practices in scientific computing](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005510#sec009)
+
+* [Ten Simple Rules for Creating a Good Data Management Plan](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004525)
 
 Conducting bioinformatics work on dedicated, on premises hardware is recommended.
 Can you think of some reasons why that would be preferred?
@@ -78,7 +86,7 @@ Let's take a look at the lifecycle of research project data.
 We will draft a data management plan later, but for now let's focus on the mechanics of
 data handling on Linux systems.
 
-### Receive data
+## Receive data
 
 There are different ways to receive bioinformatics data.
 One way is over the internet with a variety of protocols.
@@ -343,7 +351,7 @@ If the work was published more than 5 years ago and the raw data is deposited to
 public repository, then it can be deleted.
 Update the README with information on how to reproduce the findings.
 
-## Version control
+## Managing code - enter version control
 
 Research projects are complicated things, typically involving many types of experiments, data,
 people and institutions.
@@ -367,4 +375,161 @@ contribute their changes to the main repository, from which the other contributo
 latest changes.
 
 ![Distributed version control. (A) Each author has a copy of the repository where their contributions are committed before being pushed to the main central repository. (B) An example hypothetical git workflow history for a research project involving a team of three authors. Circles represent code commits. Path divergences create separate branches for independent development. Horizontal paths indicate code changes for a particular branch. Path convergences indicate where branch specific differences are incorporated into the main branch.](images/dvcs.png)
+
+Even if you are working alone, DVCS provides several benefits:
+
+* Cloud backup of files.
+
+* Always know which version is current.
+
+* Promotes good practices regarding documentation and testing.
+
+* See how things have evolved over time.
+
+* Can roll back to any of the previous states.
+
+* Issue tracking is helpful for prioritisation of tasks.
+
+DVCS are useful for coding and other areas as well such as documentation, learning materials,
+websites and ebooks.
+
+## Using git with GitHub
+
+GitHub may be a good option for you if you intend to publish your code publicly, or
+frequently collaborate with others outside the organisation.
+GitHub is not considered a backup, so you will need to ensure your code is backed up
+separately.
+It is a good idea to regularly mirror the code to Burnet's GitLab (explained below).
+
+**1. Make a GitHub account.**
+
+**2. Add an SSH key.**
+An SSH key can be generated using the command ([source](https://www.brandonchecketts.com/archives/its-2023-you-should-be-using-an-ed25519-ssh-key-and-other-current-best-practices)):
+
+```
+ssh-keygen -t ed25519 -f ~/.ssh/your-key-filename -C "your-key-comment"
+
+```
+
+Optional: Add a passphrase.
+
+The your-key-filename.pub contains the public key, which is a few hundred characters to
+be copied.
+
+On GitHub, click on your "profile" -> "settings" -> "SSH and GPG keys" -> "New SSH key"
+
+This will enable authorisation of code changes without needing to enter a passphrase.
+
+Best practice is to change out SSH keys at least annually.
+
+**3. Create a new repository**
+Provide a name without spaces or special characters.
+Personally, I use `snake_case`.
+Give a description - explain the purpose of the repo in 1 sentence.
+Make it public or private.
+I'd recommend making it public unless you have intellectual property concerns.
+Be sure not to upload any identifiable participant info.
+
+For this toy example, we could make a repo that simply holds some of the commands related to
+data management.
+
+Always add a README file at this stage.
+
+Optional: Add a `.gitignore` file, which is a list of file types that should always be ignored.
+Personally I don't use `.gitignore` files as I am always very careful which files get added
+and which do not.
+
+Lastly, there's an option to select a licence.
+There are many options here from very permissive to more restrictive.
+If you don't want anyone else to use your code, you can assert copyright by omitting a
+LICENCE.
+
+Hit the create button and you will be brought to the repo public home page.
+
+**4. Clone the repo**
+Back at your bash command line, navigate to your working area.
+For me, I like to keep by work in my `~/projects` folder.
+Then type:
+
+```
+git clone <my_repo_name>
+```
+
+Substituting <my_repo_name> with the name of your actual repo.
+
+At that point, the repo will be downloaded and you can `cd` into it.
+
+**5. Make some modifications**
+As this is just a simple test, we will make some changes to the README.
+Use `nano` or another text editor to add some more explanation to the repo.
+You can also create a new shell script and paste some of those commands we used earlier,
+together with some comments about what they do.
+
+Now we need to "add" these files.
+Which is like setting track changes on.
+You should be extremely selective with the files being added.
+Only code and documentation.
+No large data files, no results files, no folders.
+
+```
+git add README myscript.sh
+
+```
+
+**6. Commit the changes**
+Next step is to "commit" these changes, which will update the local repo.
+You will see that there is an option to add a message.
+These can become pretty important, especially when working on a large repo with multiple
+contributors.
+
+```
+git commit -m "added README and first script"
+
+```
+
+**7. Push the changes**
+The modification we made is local, so GitHub and collaborators won't be able to see it yet.
+Change it with `push`
+
+```
+git push origin main
+
+```
+
+Now go to GitHub and confirm the changes have propagated.
+
+**8. When working on a team project, always use `git pull` before making any changes.**
+It will prevent frustrations by making sure you have the most up-to-date codes upon which
+you will make additional modifications.
+
+**9. Add team mates as collaborators**
+At the GitHub repo, under the "Settings" tab, you will see a side menu with "Collaborators".
+Add your lab head and team mates to this repo.
+
+**10. Try out GitHub's issues feature**
+Issues can include new work that needs to be done (ie: features), or problems that need to
+be resolved (ie: bugs).
+Issues can be used to manage the work items for a project as they can be allocated to a
+person, and they capture the corresponding discussion.
+Try raising an issue and allocating someone (or yourself) for an issue.
+Each issue has a number (eg: `#56`), which can be referred to in commit messages.
+
+Tip: `git commit -m "#56 resolved with bugfix" && git push origin main` will close issue 
+`#56` automatically.
+
+
+
+The above steps are 90% of how researchers use git and GitHub.
+Naturally there are more advanced workflows for more complex projects that include
+many branches, automatic code testing, pull requests, etc.
+But you can learn that stuff later as you encounter such problems.
+
+## Using git with GitLab
+
+Burnet has its own GitLab server to manage code.
+It is a good idea to use GitLab if you are dealing with sensitive data, have intellectual
+property concerns, or just want to keep your code away from large corporations.
+
+First step is to raise an IT ticket to enable access to
+
 
