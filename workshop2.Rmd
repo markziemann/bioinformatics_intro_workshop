@@ -514,7 +514,7 @@ person, and they capture the corresponding discussion.
 Try raising an issue and allocating someone (or yourself) for an issue.
 Each issue has a number (eg: `#56`), which can be referred to in commit messages.
 
-Tip: `git commit -m "#56 resolved with bugfix" && git push origin main` will close issue 
+Tip: `git commit -m "close #56 with bugfix" && git push origin main` will close issue 
 `#56` automatically.
 
 
