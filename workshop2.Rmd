@@ -358,7 +358,7 @@ people and institutions.
 Research work is also very unpredictable, problems emerge all the time and we typically
 publish only a small fraction of the data/results we generate.
 
-[Itai Yanai: false directions are common in research](images/projectpath.png)
+![Itai Yanai: false directions are common in research](images/projectpath.png)
 
 If you have worked in a team sharing a common data and analysis folder, you will know that
 mistakes can happen with files and the codes can be lost.
