@@ -1,0 +1,46 @@
+---
+title: "Bioinformatics data skills workshop - Session 3: An introduction to omics analysis in R"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_width: 7
+    fig_height: 7
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+![Image credit: Steven Lokwan.](images/Header-Image-crop-1024x559.jpg)
+
+## What is R
+
+## What a typical workflow looks like
+
+* Comments
+
+* Load libraries
+
+* Read data
+
+* Cleaning
+
+* Analysis
+
+* Data visualisation
+
+* Save files
+
+* Execute
+
+## RStudio versus R on the command line
+
+## An analysis of tree growth data
+
+## An analysis of gene expression data
+
