@@ -63,6 +63,8 @@ What do you think is the best way to arrange your bioinformatics project folders
 Where to put different files including input data, sample sheets, documentations, scripts,
 results?
 
+How should we be incorporating LabArchives into our bioinformatics project workflows?
+
 ## Data management
 
 Let's take a look at the lifecycle of research project data.
@@ -573,3 +575,8 @@ Start a repo for a new project write some docs and start adding some codes.
 Learn how to use Markdown to make better documentation using a [cheatsheet](https://www.markdownguide.org/cheat-sheet/).
 
 Use the internet to find out what the README should contain for a data science project.
+
+Write a draft data management plan for a hypothetical project, which can be used as a template
+by others in your group.
+Use the "Ten Simple Rules for Creating a Good Data Management Plan" article as a guide.
+
