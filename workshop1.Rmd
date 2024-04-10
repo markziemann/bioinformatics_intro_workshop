@@ -298,6 +298,9 @@ As a class, complete the following table describing important commands.
 | paste |     |     |
 | sort |     |     |
 | tr |     |     |
+| top |     |     |
+| free |     |     |
+| df |     |     |
 
 Here is a list of further powerful commands.
 Your homework is to write a 1-sentence description of what they do.
