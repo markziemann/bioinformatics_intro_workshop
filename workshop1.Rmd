@@ -281,7 +281,6 @@ As a class, complete the following table describing important commands.
 | ls |     |     |
 | man |     |     |
 | mkdir |     |     |
-| echo |     |     |
 | cat  |     |     |
 | head, tail |     |     |
 | less, more |     |     |
