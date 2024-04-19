@@ -6,7 +6,7 @@ output:
   html_document:
     toc: true
     toc_float: true
-    code_folding: hide
+    code_folding: show
     fig_width: 7
     fig_height: 7
   prettydoc::html_pretty:
@@ -505,6 +505,17 @@ boxplot(x_vals, y_vals/2, names=c("X values", "Y values"),ylab="Measurement (cm)
 
 ```
 
+Enhanced boxplot with beeswarm.
+
+```{r,boxplots2}
+
+library("beeswarm")
+mylist <- list("X vals"=x_vals, "Y vals"=y_vals/2)
+boxplot(mylist, cex=0, ylab="Measurement (cm)",col="white",main="Main title") #cex=0 means no outliers shown
+beeswarm(mylist,pch=1,add=TRUE,cex=0.5)
+
+```
+
 Histograms are easily made.
 
 And it is possible to place multiple charts on a single image.
@@ -557,7 +568,7 @@ str(mtcars)
 
 As an example of commands that can be used for matrices and not data frames, try `mean()` for `freeny.x` and `mtcars`.
 
-## Basic commands that can be used for data frames and matrices
+### Basic commands that can be used for data frames and matrices
 
 Find out the number of rows, columns, and simple operations on those rows and columns.
 
@@ -598,7 +609,7 @@ str(mtcars_flip)
 
 ```
 
-## Subsetting a data frame
+### Subsetting a data frame
 
 One of the most common tasks in data analysis is to perform filtering.
 Last prac, we found out how to do this with vectors using the square bracket notation. Eg:`x[3]` will retrieve the 3rd element of `x`.
@@ -734,7 +745,7 @@ head(setosa)
 
 ```
 
-## Row and columns names
+### Row and columns names
 
 You can use the `colnames` and `rownames` to get the row or column names and even mofidy them.
 
@@ -795,7 +806,7 @@ mercs
 
 ```
 
-## Sorting data tables
+### Sorting data tables
 
 We are going to sort our subset of economical cars by their speed based on their quarter mile time.
 To do this, we need to use the `order()` command together with the square brackets.
@@ -819,7 +830,7 @@ reverse_sorted[,c(7,ncol(reverse_sorted))]
 
 ```
 
-## Creating data frames and matrices
+### Creating data frames and matrices
 
 First we will create a data frame for some people who completed a survey about their height and weight.
 You should always run `str()` to check that the resulting dataframe has the intended structure.
@@ -903,7 +914,7 @@ mymatrix
 
 ```
 
-## Creating charts from data frame and matrix objects
+### Creating charts from data frame and matrix objects
 
 Making charts from data frames and matrix objects is really similar to what we did above.
 Here are some examples.
@@ -1068,7 +1079,7 @@ str(mydata)
 
 ```
 
-## Save and load session and single datasets
+### Save and load session and single datasets
 
 When working in R, it is convenient to save the session with `save.image()`.
 This results in an Rdata file which contains all the data objects in your current environment.
