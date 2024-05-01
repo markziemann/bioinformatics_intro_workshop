@@ -1,5 +1,5 @@
 ---
-title: "Bioinformatics prac 3: Mastering Rstudio with Rmarkdown reports and version control"
+title: "Bioinformatics data skills workshop - Session 4: Mastering Rstudio with Rmarkdown reports and version control"
 author: "Burnet Bioinformatics Group"
 date: "`r Sys.Date()`"
 output:
