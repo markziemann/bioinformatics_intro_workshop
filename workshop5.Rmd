@@ -1,0 +1,515 @@
+---
+title: "Bioinformatics data skills workshop - Session 5: Intermediate R - functions, vectorization, parallel programming"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    self_contained: yes
+    mode: selfcontained
+    toc: true
+    toc_float: true
+    code_folding: show
+    fig_width: 7
+    fig_height: 7
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+```{r,libs}
+
+library("tictoc")
+library("parallel")
+library("beeswarm")
+
+```
+
+
+## Functional programming
+
+Functions are a key concept in computing.
+By declaring functions, we can execute complex routines with a single command.
+Functions are the backbone of most computer programs and they can help us with
+our data analysis projects by providing us reusable modules which we can transfer
+between projects.
+For example, I have customised functions that I use for all my RNA-seq studies.
+Re-using these functions allows me to complete an analysis of RNA-seq datasets in
+only a few hours of hands-on time, and prevents me from having to type out these
+long routines again and again.
+
+If you have a bunch of these functions you use regularly, then you can consider
+turning them into a package.
+A package doesn't necessarily need to be in CRAN or Bioconductor, you can keep it
+private or just within your organisation.
+
+## Functions in R
+
+A function is a stored command which can be rerun with different inputs.
+We define the function using the `function()` command where the function itself
+is defined in the `{}` curly brackets as shown below.
+
+Unlike this example, functions are normally more than one line.
+Your function can specify more than one input but has to return just one output.
+`return` is used to select what data should be returned to the user.
+If a function provides a lot of output data, then that data typically gets
+converted to a list format before being returned to the user.
+
+```{r,func1}
+
+cubed <- function(x) {
+    x^3
+}
+
+cubed(42)
+cubed(c(1,2,4))
+
+```
+
+So you can consider functions to be "shortcuts", to help you execute custom codes
+that you will be reusing again and again.
+
+Functions are a bit like lego blocks in that they are versatile.
+For example you can use functions inside other functions.
+
+```{r,func2}
+
+cubedsum <- function(x,y) {
+    z <- cubed(x) + cubed(y)
+    return(z)
+}
+
+cubedsum(3,4)
+
+```
+
+Using this approach, you can make incredibly sophisticated programs out of
+relatively simple building blocks.
+
+The inputs don't need to be single numbers, they can be vectors or dataframes.
+In this example we create a function to automate linear model analysis.
+
+```{r,func3}
+
+str(cars)
+mylm <- lm(cars[,2] ~ cars[,1])
+
+INT=signif(mylm$coefficients[1],3)
+INT
+SLOPE=signif(mylm$coefficients[2],3)
+SLOPE
+HEADER=paste("Slope:",SLOPE,"Int:",INT)
+HEADER
+
+myfunc <- function(x,y) {
+  mylm <- lm(y ~ x)
+  INT=signif(mylm$coefficients[1],3)
+  SLOPE=signif(mylm$coefficients[2],3)
+  HEADER=paste("Slope:",SLOPE,"Int:",INT)
+  plot(x,y)
+  abline(mylm,lty=2,lwd=2,col="red")
+  mtext(HEADER)
+}
+
+myfunc(cars[,1],cars[,2])
+
+```
+
+R functions can be reused.
+Let's try with some built-in datasets.
+
+```{r,func4}
+
+myfunc(women$height, women$weight)
+
+myfunc(ChickWeight$Time, ChickWeight$weight)
+
+myfunc(Loblolly$age, Loblolly$height)
+
+```
+
+Let's try to make our own functions with the next 30 mins.
+Make a function that accepts 2 numerical vectors and does the following:
+
+1. Student t-test with the syntax `t.test(vec2,vec1)`.
+
+2. Make a boxplot of the two groups with a subheading that contains the t.test
+p-value using the `mtext()` command.
+
+In order to generate two numeric vectors you can use the following:
+
+```{r,func5}
+
+vec1 <- rnorm(n=10, mean=20, sd=10)
+
+vec2 <- rnorm(n=10, mean=30, sd=15)
+
+```
+
+Apply this function to calculate the difference in weight between control and
+treatment groups in the built-in `PlantGrowth` dataset.
+
+
+## Vectorisation with sapply and lapply
+
+The preferred solution to repeat a task on many inputs is to use vectorisation.
+Let's say we want to find the median of three matrices.
+We create a new object, either a vector or list and then run a function on each
+element.
+
+Note below the difference in the output type given by `vapply`, `lapply` and
+`sapply`.
+
+```{r,apply1}
+
+mx1 <- matrix( rbinom(n=100, size=50, prob=0.8), nrow = 10 )
+mx2 <- matrix( rbinom(n=100, size=100, prob=0.8), nrow = 10 )
+mx3 <- matrix( rbinom(n=100, size=300, prob=0.8), nrow = 10 )
+
+mxs <- list(mx1,mx2,mx3)
+
+str(mxs)
+
+# sapply output is either a vector or matrix
+sapply(X = mxs, FUN = mean)
+
+# lapply output is always a list
+lapply(X = mxs, FUN = mean)
+
+```
+Take a few minutes now to visit the help page for these three commands.
+
+`?sapply`
+
+As you can see from the code above, vectorisation leads to shorter and more
+readable code.
+Naturally, you can use your custom functions with `sapply` and other `apply`
+family functions.
+
+Here I've created a function to calculate the mean correlation in the columns of
+a matrix.
+
+```{r,apply2}
+
+meancor <- function(x) {
+    mycor <- cor(x)
+    mean(mycor)
+}
+
+meancor(mx1)
+
+sapply(mxs,meancor)
+
+```
+
+Your turn.
+Use `sapply` to find the mean and standard deviation of each matrix (mx1,mx2 and
+mx3).
+
+## Apply - for two dimensional objects
+
+Sometimes you have a large data table and you want to run the same analysis on
+each row or column.
+To do this, use `apply`. The general syntax is:
+
+`apply( x, MARGIN, FUN )`
+
+Where `x` is the object (df or mx) to work on.
+
+`MARGIN` is either 1 for rows and 2 for columns.
+
+`FUN` is the function to ron on the data.
+
+For example, here is how you can calculate median of rows or columns in a matrix
+or dataframe.
+
+```{r,apply3}
+
+# row medians
+apply(mx1, 1, median)
+
+# column medians
+apply(mx2, 2, median)
+
+```
+
+In this next example I will create a new function that will calculate the
+coefficient of variation (CV), and then run this for each of the columns in the
+`mtcars` data.
+
+```{r,apply4}
+
+cv <- function(x) {
+  mymean <- mean(x)
+  mysd <- sd(x)
+  cv <- mysd/mymean
+  signif(cv,3)
+}
+
+# run on one vector
+cv(mtcars$mpg)
+
+# now run on all columns in the df
+apply(X = mtcars, MARGIN = 2  ,FUN = cv)
+
+```
+
+Your turn.
+Create a function that reports the difference between the median and mean of a
+numerical  vector, then use this function inside an `apply` command to report
+interquartile ranges of rows in the `mx1` matrix.
+
+## Parallel processing
+
+Sometimes we need to repeat some computationally intensive work many times.
+This can be sped up using the many CPU threads on modern processors.
+
+For example we have some proteomics data with 2000 proteins and want to run a
+t-test.
+
+First let's make a synthetic dataset.
+
+```{r,mx1}
+
+nreps=5 # number of replicates per group
+nanalytes=20000 # number of proteins detected
+nup=100 # number of overexpressed proteins.
+ndn=300 # number of downexpressed proteins.
+foldchange=2 # fold change of proteins
+setseed=42 # set seed so that results are repeatable
+set.seed(setseed)
+mx1 <- matrix(rnorm(n=nanalytes*10,mean=1000,sd=100),ncol=nreps*2)
+colnames(mx1) <- c(paste("ctl",1:nreps,sep=""), paste("trt",1:nreps,sep=""))
+rownames(mx1) <- paste("prot",sprintf('%0.5d', 1:nanalytes),sep="")
+ups <- sample(x=1:nrow(mx1),size=nup,replace=FALSE)
+dns <- sample(x=setdiff(1:nrow(mx1),ups),size=ndn,replace=FALSE)
+trt <- mx1[,(nreps+1):(nreps*2)]
+trt[ups,] <- trt[ups,] * foldchange
+trt[dns,] <- trt[dns,] * 1 / foldchange
+ctl <- mx1[,1:nreps]
+mx2 <- cbind(ctl,trt)
+
+str(mx2)
+head(mx2)
+
+str(which(mx2<0))
+
+```
+
+Run a t-test.
+
+```{r,ttest1}
+
+myttest <- function(mx,nctl,ntrt, paired=FALSE) {
+  tres <- lapply(1:nrow(mx), function(i) {
+    x <- mx[i,(nctl+1):(nctl+ntrt)]
+    y <- mx[i,1:nctl]
+    tres <- t.test(x=x,y=y,alternative = "two.sided",paired=paired)
+    log2FC <- log2(tres$estimate[[1]]/tres$estimate[[2]])
+    out=c("pval"=tres$p.value,"log2FC"=log2FC)
+    return(out)
+  })
+  df <- as.data.frame(do.call(rbind,tres))
+  rownames(df) <- rownames(mx)
+  df <- df[order(df$pval),]
+  df$fdr <- p.adjust(df$pval,method="fdr")
+  return(df)
+}
+
+tic()
+mytres <- myttest(mx=mx2,nctl=5,ntrt=5)
+head(mytres,20)
+toc()
+
+```
+
+That was actually very fast, parallel processing won't help us that much.
+
+Now test the number of up and downregulated proteins.
+
+```{r,ttest2}
+
+nrow(subset(mytres,fdr<0.05 & log2FC>0))
+
+nrow(subset(mytres,fdr<0.05 & log2FC<0))
+
+```
+
+Calculate precision and recall.
+
+Precision = the accuracy of positive instances. AKA: specificity.
+
+Recall = the proportion of positive instances called. AKA: sensitivity.
+
+F1 = harmonic mean of Precision and Recall.
+
+```{r,ttest3}
+
+myups <- which(rownames(mx2) %in% rownames(subset(mytres,fdr<0.05 & log2FC>0)))
+mydns <- which(rownames(mx2) %in% rownames(subset(mytres,fdr<0.05 & log2FC<0)))
+myprec <- c(myups %in% ups, mydns %in% dns)
+myprec <- length(which(myprec==TRUE))/length(myprec)
+myrec <- c(ups %in% myups, dns %in% mydns)
+myrec <- length(which(myrec==TRUE))/length(myrec)
+
+```
+
+Test 100 simulations with different set seeds.
+
+This is a more realistic application of parallel processing because each
+simulation takes a few seconds and we can execute them in parallel.
+
+```{r,parallel1}
+
+simdat <- function(nreps=5, nanalytes=20000, nup=100, ndn=300, mymean=1000,
+  mysd=100, foldchange=2, setseed=42){
+  set.seed(setseed)
+  mx1 <- matrix(rnorm(n=nanalytes*10,mean=mymean,sd=mysd),ncol=nreps*2)
+  colnames(mx1) <- c(paste("ctl",1:nreps,sep=""), paste("trt",1:nreps,sep=""))
+  rownames(mx1) <- paste("prot",sprintf('%0.5d', 1:nanalytes),sep="")
+  ups <- sample(x=1:nrow(mx1),size=nup,replace=FALSE)
+  dns <- sample(x=setdiff(1:nrow(mx1),ups),size=ndn,replace=FALSE)
+  trt <- mx1[,(nreps+1):(nreps*2)]
+  trt[ups,] <- trt[ups,] * foldchange
+  trt[dns,] <- trt[dns,] * 1 / foldchange
+  ctl <- mx1[,1:nreps]
+  mx2 <- cbind(ctl,trt)
+  out <- list(ups,dns,mx2)
+  return(out)
+}
+
+tic()
+res1 <- lapply(1:3,function(i) {
+  seed=i*100
+  dat <- simdat(setseed=seed)
+  ups <- dat[[1]]
+  dns <- dat[[2]]
+  mx <- dat[[3]]
+  mytres <- myttest(mx=mx,nctl=5,ntrt=5)
+  myups <- which(rownames(mx2) %in% rownames(subset(mytres,fdr<0.05 & log2FC>0)))
+  mydns <- which(rownames(mx2) %in% rownames(subset(mytres,fdr<0.05 & log2FC<0)))
+  myprec <- c(myups %in% ups, mydns %in% dns)
+  myprec <- length(which(myprec==TRUE))/length(myprec)
+  myrec <- c(ups %in% myups, dns %in% mydns)
+  myrec <- length(which(myrec==TRUE))/length(myrec)
+  res = c("seed"=seed,"precision"=myprec,"recall"=myrec)
+  return(res)
+})
+toc()
+res1
+
+```
+
+Now execute 16 runs on 4 parallel threads
+
+Use the `parallel` package.
+
+```{r,parallel2}
+
+tic()
+res2 <- mclapply(1:16,function(i) {
+  seed=i*100
+  dat <- simdat(setseed=seed)
+  ups <- dat[[1]]
+  dns <- dat[[2]]
+  mx <- dat[[3]]
+  mytres <- myttest(mx=mx,nctl=5,ntrt=5)
+  myups <- which(rownames(mx2) %in% rownames(subset(mytres,fdr<0.05 & log2FC>0)))
+  mydns <- which(rownames(mx2) %in% rownames(subset(mytres,fdr<0.05 & log2FC<0)))
+  myprec <- c(myups %in% ups, mydns %in% dns)
+  myprec <- length(which(myprec==TRUE))/length(myprec)
+  myrec <- c(ups %in% myups, dns %in% mydns)
+  myrec <- length(which(myrec==TRUE))/length(myrec)
+  res = c("seed"=seed,"precision"=myprec,"recall"=myrec)
+  return(res)
+},mc.cores=4)
+toc()
+res2df <- data.frame(do.call(rbind,res2))
+res2df
+res2df$seed=NULL
+
+```
+
+Now make a chart of the results.
+
+```{r,chart1}
+
+res2df$seed=NULL
+boxplot(res2df,col="white",cex=0,ylab="Index")
+beeswarm(res2df,add=TRUE,pch=19,cex=1.8,col="black")
+
+```
+
+Now repeat with more repeats and higher number of available CPU threads.
+Can you find out the optimum number of parallel threads for your system?
+
+# Test your understanding - take home questions
+
+### Question 1
+
+Create a function that calculates the cubed root for a number
+
+### Question 2
+
+Use `sapply` to calculate the cubed root for the numbers 44,77,99,123
+
+### Question 3
+
+Use `if` to test whether object `mtcars.tsv` exists and run `head` if it does
+exist.
+
+### Question 4 
+
+Use `apply` to get the maximum value in each column of mtcars.
+
+### Question 5
+
+Use `replicate` to quantify how frequent it is to draw the same number twice
+where the pool of numbers consists of 0 to 9.
+
+### Question 6
+
+How frequent it would be to flip 10 coins simultaneously and get all heads?
+Use mclapply to simulate 10 million replications.
+How much time can be saved with parallel execution
+
+```{r,echo=FALSE,eval=FALSE, include=FALSE}
+
+tic()
+res <- lapply(1:1e7, function(i) {
+  sum(sample(x=c(0,1),size=10,replace=TRUE))==10
+}  )
+length(which(res==TRUE))
+toc()
+
+tic()
+res <- mclapply(1:1e7, function(i) {
+  sum(sample(x=c(0,1),size=10,replace=TRUE))==10
+} , mc.cores=16 )
+length(which(res==TRUE))
+toc()
+
+## 39.3 seconds saved
+
+out <- lapply(1:32,function(threads){
+  tic()
+  res <- mclapply(1:1e7, function(i) {
+    sum(sample(x=c(0,1),size=10,replace=TRUE))==10
+  } , mc.cores=threads )
+  out <- toc()
+  return(out$toc - out$tic)
+})
+out
+
+```
+
+## Session information
+
+For reproducibility.
+
+```{r,sessioninfo}
+
+sessionInfo()
+
+```
