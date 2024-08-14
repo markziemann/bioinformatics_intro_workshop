@@ -484,7 +484,7 @@ apply(mtcars,2,max)
 
 </details>
 
-### Question 5
+### Question 4
 
 Use `lapply` or `sapply` to draw two numbers from 0 to 9.
 How frequent it is to draw the same number twice?
@@ -504,7 +504,7 @@ table(res)
 
 </details>
 
-### Question 6
+### Question 5
 
 How frequent it would be to flip 10 coins simultaneously and get all heads?
 Use mclapply to simulate 10 million replications.
