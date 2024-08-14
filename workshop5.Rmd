@@ -467,9 +467,7 @@ Use `sapply` to calculate the cubed root for the numbers 44,77,99,123
 <details><summary>Solution</summary>
 
 ```
-a <- c(8,27,64)
-cubedroot <- function(x) { x^(1/3) }
-cubedroot(a)
+sapply(a,cubedroot)
 ```
 
 </details>
