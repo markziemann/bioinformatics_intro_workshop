@@ -1,0 +1,134 @@
+---
+title: "Workshop RNA-seq"
+author: "Mark"
+date: "2024-08-21"
+output: html_document
+---
+
+```{r setup}
+
+library("RhpcBLASctl")
+
+RhpcBLASctl::blas_set_num_threads(1)
+
+library("DESeq2") #bioconductor package
+library("kableExtra")
+
+```
+
+## R Markdown
+
+This is an R Markdown document. 
+Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. 
+For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+
+download.file("https://ziemann-lab.net/public/bioinfo_workshop/GSE158420_counts_fixed.tsv",destfile = "counts.txt.gz")
+
+x <- read.table("counts.txt.gz",header=TRUE,sep = "\t")
+
+str(x)
+head(x)
+dim(x)
+```
+
+## Basic QC
+
+Barchart of number of reads per sample.
+
+```{r,fig.height=10,fig.width=5}
+
+cs <- colSums(x)
+table(cs > 20e6)
+cs[which(cs < 20e6)]
+
+barplot(colSums(x))
+barplot(colSums(x),horiz = TRUE, las=1)
+
+```
+
+## Principal component analysis
+
+Using PCA to identify sources of variation.
+
+```{r,pca}
+
+mds <- cmdscale(dist(t(scale(x))),k=3)
+
+str(mds)
+cols <- rep(c("lightblue","pink"),37)
+plot(mds[,1:2],col=cols,pch=19,cex=2)
+text(mds[,1:2],labels=rownames(mds))
+
+```
+## Samplesheet
+
+Will create samplesheet from col names.
+
+We need to specify columns in `ss` that have patient and tumor information.
+
+```{r,ss}
+
+colnames(x)
+ss <- data.frame(colnames(x))
+str(ss)
+ss
+
+grep("T",colnames(x))
+grepl("T",colnames(x))
+
+ss$tumor <- factor(grepl("T",colnames(x)))
+
+gsub("N","",colnames(x))
+gsub("T","",colnames(x))
+
+ss$patient <- factor(gsub("N","",gsub("T","",colnames(x))))
+
+ss %>%
+  kbl(caption = "Sample sheet") %>%
+  kable_paper("hover", full_width = F)
+
+```
+
+## DESeq2 differential expression
+
+```{r,deseq2}
+
+dds <- DESeqDataSetFromMatrix(countData = x , colData=ss, design = ~ patient + tumor)
+res <- DESeq(dds)
+z <- results(res)
+vsd <- vst(dds, blind=FALSE)
+zz <- cbind(as.data.frame(z),assay(vsd))
+dge <- as.data.frame(zz[order(zz$pvalue),])
+
+head(dge) |> kbl(caption="Top differential genes") |> kable_paper("hover", full_width = F)
+
+```
+
+## Smear plot
+
+Mark significant genes FDR<0.05
+
+```{r smear}
+
+sig <- subset(dge,padj<0.05)
+
+plot(log10(dge$baseMean),dge$log2FoldChange,pch=19,cex=0.5,main="Smear plot")
+points(log10(sig$baseMean),sig$log2FoldChange,col="red",pch=19,cex=0.5)
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+## Session information
+
+For reproducibility.
+
+```{r,session}
+
+sessionInfo()
+```
