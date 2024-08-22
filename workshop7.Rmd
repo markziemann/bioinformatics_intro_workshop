@@ -270,6 +270,41 @@ If it worked correctly, you can exit R, the Apptainer, and interactive session.
 Alternatively, use `squeue` to find the JOBID of the interactive session and then
 `scancel` to terminate it.
 
+## Final thoughts
+
+Congrats for getting this far.
+Now you have a highly reproducible workflow.
+So long as you have the sif file, input data and accessible code repository, this workflow
+will perform exactly the same on any computer that can run Apptainer.
+
+Keep the html report as evidence that the work was conducted.
+Upload it to LabArchives.
+
+Loading big datasets into the container is another challenge which has a few different
+solutions:
+
+* Download from central repository
+
+* Obtain from home directory
+
+* Create the Apptainer image with the full data set included
+
+If your work is going to be published, try the following checklist.
+
+Firstly put the source data into a suitable repository.
+For example RNA-seq data would be suited to NCBI GEO submission.
+
+Secondly put the following onto Zenodo or FigShare for long-term archiving:
+
+* Code repository snapshot including instructions to future users on how to reproduce the
+whole thing.
+
+* HTML reports as evidence that the work was done.
+
+* Apptainer sif file to provide a stable computing environment.
+
+* A README file that documents these objects and how they relate to the published paper.
+
 ## Session information
 
 For reproducibility.
