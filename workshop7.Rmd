@@ -221,17 +221,27 @@ While the `def` file is very small, like 4 kB, the image could be up to 2 GB in 
 
 ## Launch the Apptainer
 
-And once the image is built, you can launch the image and start interacting with it using
+And once the image is built, we can start running the workflow.
+But before we do that we need to provision ourselves an interactive session on the hpc.
+
+The following command will give you an interactive session with 4 cores, 16 GB RAM for 24 hrs.
+
+```
+srun -c 4 -p long --mem 16G --time 1-00:00:00 -I60 -N 1 -n 1 --pty bash -i
+```
+
+Now create a tmux session so that your session is not cancelled when disconnecting SSH.
+If you have not used tmux before here is a [blog post](https://genomespot.blogspot.com/2020/05/managing-linux-shell-sessions-with-tmux.html) showing the key commands.
+
+```
+tmux new -s myworkflow
+```
+
+Now you can launch the image and start interacting with it using
 bash.
 
 ```
 apptainer run --writable Apptainer.sif
-```
-
-or
-
-```
-apptainer shell --writable Apptainer.sif
 ```
 
 If you get an error, try replacing `--writable` with `--writable-tmpfs`.
@@ -245,6 +255,19 @@ of the R Markdown file.
 rmarkdown::render("myworkflow.Rmd")
 ```
 
+From here, the results can be copied to the host filesystem like this:
+
+```
+file.copy("myworkflow.html","~/projects/myproject/")
+```
+
+Note that Apptainer automatically mounts the user's home directory in the container, which
+makes transfers relatively easy.
+
+Copy this file to your computer using `scp` and inspect it with a web browser.
+If it worked correctly, you can exit R, the Apptainer, and interactive session.
+Alternatively, use `squeue` to find the JOBID of the interactive session and then
+`scancel` to terminate it.
 
 ## Session information
 

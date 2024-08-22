@@ -11,7 +11,7 @@ From: bioconductor/bioconductor_docker:RELEASE_3_19
     && rm -rf /var/lib/apt/lists/*
 
   # Install CRAN packages
-  Rscript -e 'install.packages(c("RhpcBLASctl","zoo","reshape2","gplots","MASS","scales","eulerr","kableExtra","vioplot","pkgload","beeswarm"))'
+  Rscript -e 'install.packages(c("RhpcBLASctl","prettydoc","zoo","reshape2","gplots","MASS","scales","eulerr","kableExtra","vioplot","pkgload","beeswarm"))'
 
   # Install bioconductor packages
   Rscript -e 'BiocManager::install(c("DESeq2","fgsea","limma","topconfects","mitch"))'
