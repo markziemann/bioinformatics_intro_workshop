@@ -1,0 +1,246 @@
+---
+title: "Bioinformatics data skills workshop - Session 7: Containerising workflows on shared computers"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    self_contained: yes
+    mode: selfcontained
+    toc: true
+    toc_float: true
+    code_folding: show
+    fig_width: 7
+    fig_height: 7
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+bibliography: references.bib
+csl: plos-computational-biology.csl
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+Previously we developed a basic RNA-seq workflow for discovery of differential expression
+in lung cancer.
+
+In this session we will use container technology to make the workflow reproducible,
+with the complication that on HPC and other shared systems we do not have administrator
+"root" permissions.
+
+## Why containerisation is important
+
+Like other software, our analytical tools receive regular upgrades to fix bugs and include
+new features.
+
+This results in research code that could yield different results if the dependancies are
+not exactly defined.
+
+Although it is common practice to describe major version of our software stack including
+Python, R and packages in publications, there are still cases where differences in system
+dependancies impact final results [@Vallet2022-ut].
+
+In order to make the work reproducible, we need to capture the computing environment.
+This can be done with virtual machines and containers.
+Virtual machines are the ability to run a full operating system (guest) within another
+system (host).
+These require a lot of drive space and incur high compute overhead in terms of memory and
+CPU power.
+On the other hand, containers are more minimal and share most components of the operating
+system from the host.
+They also are more lightweight in terms of memory and incur virtually no reduction in
+performance as compared to native execution.
+Therefore, containers are a good way for researchers to encapsulate their research workflow.
+Each project gets it own container "image" which we can preserve into the future to ensure
+that our work will be reproducible.
+This means that we don't need to stress too much about changes that will occur if we upgrade
+software versions running on the host, like R and Python.
+There is an argument that you may not need to install software like R and Python on your
+daily driver, as you can rely sufficiently on containers.
+
+## Approaching research as a software engineering problem
+
+There are distinct phases of software development.
+
+![Software development stages](https://oroinc.com/b2b-ecommerce/wp-content/uploads/sites/3/2019/05/Software-environments.png)
+
+1. Development and Testing: here, the developers make changes to software to improve software.
+They may work individually or in small teams, and do some testing of the new code, working
+iteratively to meet their goals.
+New code is passed on to a separate individual or team for testing.
+Tests are made for individual components as well as the software stack as a whole.
+Changes may be suggested and will go back to step 1 for improvements.
+
+2. Staging: here, the code is deployed to an identical server environment as the production,
+and the app is exposed to realistic workloads.
+For example, a social media app has a front end interface, back end database, and many
+concurrent users.
+Extensive stress testing occurs at this stage with a dedicated team of QA engineers.
+
+4. Production: if tests are passed, then the software can be deployed.
+
+So how does this relate to researchers?
+
+When we write scripts in bash, R or another language, generating charts and results, we can
+call this "Development".
+We can test this extensively on the same computing environment to make sure the figures
+look good and we are generating all the desired results to support the publication.
+You may send analysis reports to your supervisor, who is your "tester".
+They will suggest changes and you will iteratively complete the workflow.
+
+Once you think the elements of the workflow are working nicely, you can put it into its own
+container environment and run from start to end.
+This can be considered "staging".
+It should complete without errors and with predictable dependable results.
+At this stage, the work could be part of a submitted manuscript.
+Peer-reviewers may suggest changes, which may send the project back to development.
+
+Final publication can be considered "production".
+
+## Options for containerised workflows
+
+Docker is the most well known containerisation system and works well for research
+software with one caveat: it requires root (admin) permissions.
+This isn't a problem if you have your own workstation, or if you have a permissive shared
+system, like a server that belongs to your lab, but most HPCs do not allow Docker.
+
+There are ways to circumvent this, for example you could use another computer where you have
+root access to create the Docker image and then you can transfer that image as a file to
+the HPC, where you can use alternative softwares like Singularity or Udocker to execute
+rootless workflows.
+
+But not everyone has another computer, so it would be convenient to be able to create such
+an image on the HPC from scratch.
+The `Apptainer` tool (a derivative of Singularity) is able to do this.
+
+![Apptainer logo](https://apptainer.org/apptainer.svg)
+
+Here we will use Apptainer to create an image to run our transcriptome analysis.
+
+Let's take a look at the [Apptainer Documentation](https://apptainer.org/docs/user/latest/quick_start.html#building-images-from-scratch)
+about how to make a custom image from scratch.
+
+## What about conda you say?
+
+Conda is no longer free for organisations with >200 employees, which includes most
+universities and research institutes.
+
+You can use conda on your personal device for free, but be warned that if you use it on
+your organisation's IT systems, that the organisation might be liable for unpaid licence
+fees.
+
+Conda also doesn't resolve the problem of system dependancies impacting final results.
+
+## Before we start
+
+"Knit" your R Markdown script to ensure that it completes as expected.
+Inspect the html and fix any issues now.
+
+## Customising your container image
+
+If you need R in your image, my recommendation is to start with an immage that already has R.
+Thankfully, there are many options:
+
+* [Rocker](https://hub.docker.com/r/rocker/rstudio) - which has R and Rstudio installed.
+
+* [Bioconductor](https://www.bioconductor.org/help/docker/) - which has many of the necessary
+system dependancies for Bioconductor packages.
+
+Let's consider the transcriptome workflow we used previously, we need to catalog system
+packages and R packages we need in the container.
+
+Here is an example definition file suitable for our transcriptome study.
+You can see that it installs system packages first, then a python based app called `multiQC`,
+then it installs R packages from CRAN and then Bioconductor.
+After all that stuff is installed, it then clones the project repo from GitHub.
+So that project repo will need to exist and be publicly available.
+
+```
+BootStrap: docker
+From: bioconductor/bioconductor_docker:RELEASE_3_19
+
+%post
+  # Update apt-get
+  apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y nano git libncurses-dev xorg openbox \
+    && pip install multiqc \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+  # Install CRAN packages
+  Rscript -e 'install.packages(c("RhpcBLASctl","zoo","reshape2","gplots","MASS","scales","eulerr","kableExtra","vioplot","pkgload","beeswarm"))'
+
+  # Install bioconductor packages
+  Rscript -e 'BiocManager::install(c("DESeq2","fgsea","limma","topconfects","mitch"))'
+
+  # get a clone of the codes
+  git clone https://github.com/markziemann/myproject.git
+
+  # Set the container working directory
+  DIRPATH=/myproject
+  mkdir -p $DIRPATH
+  cd $DIRPATH
+
+%environment
+  export DIRPATH=/myproject
+
+%runscript
+  cd $DIRPATH
+  exec /bin/bash "$@"
+
+%startscript
+  cd $DIRPATH
+
+%labels
+   Author Mark Ziemann
+   Date 22 Aug 2024
+```
+
+If you don't want to use GitHub resource like this, you can replace that line with a new
+`%files` section like this:
+
+```
+%files
+myproject /
+```
+
+It will copy the myproject folder to the root directory of the image.
+
+Save the definition file as `Apptainer.def`.
+
+## Build with Apptainer
+
+Using the new definition file, build the image.
+
+```
+apptainer build Apptainer.sif Apptainer.def
+```
+
+It will create a singularity image file (sif).
+While the `def` file is very small, like 4 kB, the image could be up to 2 GB in size.
+
+## Launch the Apptainer
+
+And once the image is built, you can launch the image and start interacting with it using
+bash.
+
+```
+apptainer run --writable Apptainer.sif
+```
+
+or
+
+```
+apptainer shell --writable Apptainer.sif
+```
+
+
+## Session information
+
+For reproducibility.
+
+```{r,sessioninfo}
+
+sessionInfo()
+
+```
