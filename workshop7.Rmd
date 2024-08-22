@@ -264,7 +264,7 @@ file.copy("myworkflow.html","~/projects/myproject/")
 Note that Apptainer automatically mounts the user's home directory in the container, which
 makes transfers relatively easy.
 
-Copy this file to your computer using `scp` and inspect it with a web browser.
+Copy this file to your personal computer using `scp` and inspect it with a web browser.
 If it worked correctly, you can exit R, the Apptainer, and interactive session.
 Alternatively, use `squeue` to find the JOBID of the interactive session and then
 `scancel` to terminate it.
