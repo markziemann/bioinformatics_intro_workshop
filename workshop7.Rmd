@@ -234,6 +234,17 @@ or
 apptainer shell --writable Apptainer.sif
 ```
 
+If you get an error, try replacing `--writable` with `--writable-tmpfs`.
+You will hopefully find yourself with a bash prompt in the Apptainer.
+Use `ls` to see the contents of the folder, you will hopefully see the R Markdown file.
+
+To execute it, open an R command line and use the following command, substituting the name
+of the R Markdown file.
+
+```
+rmarkdown::render("myworkflow.Rmd")
+```
+
 
 ## Session information
 

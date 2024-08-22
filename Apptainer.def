@@ -17,15 +17,15 @@ From: bioconductor/bioconductor_docker:RELEASE_3_19
   Rscript -e 'BiocManager::install(c("DESeq2","fgsea","limma","topconfects","mitch"))'
 
   # get a clone of the codes
-  git clone https://github.com/markziemann/lung_brain.git
+  git clone https://github.com/markziemann/bioinformatics_intro_workshop.git
 
   # Set the container working directory
-  DIRPATH=/lung_brain
+  DIRPATH=/bioinformatics_intro_workshop
   mkdir -p $DIRPATH
   cd $DIRPATH
 
 %environment
-  export DIRPATH=/lung_brain
+  export DIRPATH=/bioinformatics_intro_workshop
 
 %runscript
   cd $DIRPATH
