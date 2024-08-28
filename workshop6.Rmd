@@ -1,0 +1,286 @@
+---
+title: "Bioinformatics data skills workshop - Session 6: Hands on omics analysis reports with R Markdown"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    self_contained: yes
+    mode: selfcontained
+    toc: true
+    toc_float: true
+    code_folding: show
+    fig_width: 7
+    fig_height: 7
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+## Overview
+
+Previously in the series, we have been learning about the basics of RStudio,
+R Markdown and version control with git.
+
+In this session, we will be using workshop time to write a R Markdown script to
+analyse some RNA-seq data.
+
+This is gene expression data from 39 lung cancer patients that includes both
+tumor and normal adjacent tissue, which is available from NCBI GEO under
+accession number [GSE158420](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE158420).
+
+The general goals of today's session is to conduct the following:
+
+* Data import, checking and cleaning.
+
+* Basic quality control: count the number of reads per sample.
+
+* Principal component analysis: quantify within and between group variation.
+
+* Statistical analysis of differential expression.
+
+* Visualisation of key findings.
+
+For all of these steps, I will be providing you helpful tips for conducting the
+analysis, but it is up to you to put the pieces into a complete workflow.
+
+As you are growing the workflow, be sure to knit it regularly to ensure the parts
+are working well together.
+
+For best results, work in small groups of 2-3.
+
+## Data import, checking and cleaning
+
+The RNA-seq counts are available from the GEO Accession.
+In your script, include a command to download the file from GEO.
+Use `read.table()` to import the data.
+The row names (gene symbols) might not be unique, so use the `row.names=NULL`
+option to read it in.
+Use `duplicated()` to find out how many gene symbols are duplicated.
+Non-unique row names can be dealt with using `aggregate()`.
+
+```
+xa <- aggregate(. ~ row.names,x,sum)
+```
+
+Next, use the `dim()`, `str()` and `head()` commands to do some basic checks
+of the data structure.
+Do you notice anything strange?
+
+There is an alternative download link in the bioinfo_workshop folder [here](https://ziemann-lab.net/public/bioinfo_workshop/).
+
+## Basic quality control
+
+For RNA-seq, there are several types of QC that can be done.
+Let's just focus on quantifying the number of reads per sample.
+Present the data as a bargraph, using the `barplot()` or `ggplot2()` functions.
+
+The size of the chart can be adjusted using `fig.width` and `fig.height` options in
+the chunk header.
+
+Also check the number of genes that are included in this dataset.
+If there are ~60,000 genes annotated in the human genome, do you think this
+dataset has already undergone some filtering of lowly expressed genes?
+
+Does the dataset need any additional filtering of lowly expressed genes?
+
+## Principal component / Multidimensional scaling analysis
+
+You can use the `princomp()` or `cmdscale()` functions.
+Here is an example with cmdscale, that saves an object called `mds` that has the
+coordinates of the first three dimensions.
+
+```
+mds <- cmdscale(dist(t(scale(x))),k=3)
+
+```
+
+Next, use `plot()` to plot the first two dimensions.
+
+Use `text()` to overlay the sample names.
+
+Now can you use different colours for tumor and normal tissues?
+The colours of each point can be provided as a vector in the `plot()` function.
+The vector needs to be the same length as the number of columns in the dataset.
+
+Make another barplot that shows the magnitude of eigenvalues for the first 10
+dimensions.
+
+## Statistics analysis of differential expression
+
+In this step we will conduct differential analysis.
+We will use DESeq2 because it has superior accuracy compared to other similar
+packages.
+
+Here is a general workflow of how DESeq2 can be applied, which does a `paired`
+analysis.
+
+```
+library("DESeq2") #bioconductor package
+dds <- DESeqDataSetFromMatrix(countData = x , colData=ss, design = ~ patient + tumor)
+res <- DESeq(dds)
+z <- results(res)
+vsd <- vst(dds, blind=FALSE)
+zz <- cbind(as.data.frame(z),assay(vsd))
+dge <- as.data.frame(zz[order(zz$pvalue),])
+```
+
+The missing element from the above code chunk is the samplesheet (ss).
+We will need to set up a sample sheet that has the patient ID and whether the
+sample is normal or tumour.
+
+The samplesheet should be included in the report in a nice kable table.
+
+```
+library("kable") # cran package
+
+ss %>%
+  kbl(caption = "Sample sheet") %>%
+  kable_paper("hover", full_width = F)
+```
+
+Once DESeq2 is done, count the number of genes with FDR<0.05 that are up- and
+down-regulated.
+The `subset()` function can be used for this.
+
+Make another two kable tables showing the top 20 up annd down regulated genes.
+
+## Visualisation of key findings
+
+**MA plot:** use `plot()` with log10(baseMean) on the x-axis and log2 fold change
+on the y-axis.
+Mark significant genes in a different colour.
+This can be achieved by first running `plot()` and then `points()`.
+The `points()` function adds additional data series to the plot.
+Bonus points for adding a subtitle that includes the number of genes in total,
+the number with FDR<0.05 that are up- and down-regulated respectively.
+The `mtext()` function can add a subheading.
+
+**Volcano plot:** Similar to the above, except that log2 fold change is on the
+x-axis and -log10 p-value is on the y-axis.
+
+**Heatmap:** Use the `heatmap.2` function of the `gplots()` CRAN package to make
+a heatmap with the top 50 genes.
+
+Here is an example of plotting Pearson correlation coefficient with the default
+red and yellow palette.
+
+```
+heatmap.2(cor(xx),trace="n",scale="none", main="Pearson correlation heatmap")
+```
+
+Here is how you make a blue, white and red palette which is popular.
+
+```
+colfunc <- colorRampPalette(c("blue", "white", "red"))
+```
+
+Here is an example of making a heatmap from data in a matrix (mx).
+The matrix needs to have normalised values.
+Normalisation by total library size is simplest.
+
+```
+heatmap.2( mx, col=colfunc(25),
+  scale="row" , trace="none",
+  margins = c(6,10), cexRow=.6, cexCol=.5, main="Top 50 genes")
+```
+
+Normalising by library size can be done using `apply()`, dividing counts by the
+total number for that sample and multiplying by 1e6.
+
+```
+rpm <- apply(x,2,function(y) {y/sum(y)*1e6} )
+```
+
+Alternatively, use the normalised values provided by DESeq2.
+
+Bonus points for using `ColSideColors` to specify which samples are tumour and
+which are normal.
+
+## Enrichment analysis
+
+I'm not sure whether we will have enough time to go through this in the workshop,
+so I have included a simple enrichment analysis using the `fgsea` package.
+
+The results can be shown as a volcano plot, or as a barplot of the sets with the
+biggest magnitude enrichment scores that need the preset significance threshold
+(FDR<0.01).
+
+```
+
+library("fgsea") #bioconductor
+
+dge$stat[which(is.na(dge$stat))] <- 0 # substitute 0 for NA vals
+
+stat <- dge$stat #use DESeq2 test stat for ranking genes
+names(stat) <- rownames(dge) #attach gene names to values
+
+fres <- fgsea(pathways=gs,stats=stat,minSize=5, nproc=4) #run fgsea
+
+fsig <- subset(fres,padj<0.05) # subset significant sets
+nrow(fsig)
+
+fres <- fres[order(-abs(fres$ES)),]
+
+head(subset(fres,padj<0.05 & ES>0),20) %>%
+  kbl(caption="mRNA upregulated pathways") %>%
+  kable_styling("hover",full_width=FALSE)
+
+head(subset(fres,padj<0.05 & ES<0),20) %>%
+  kbl(caption="mRNA downregulated pathways") %>%
+  kable_styling("hover",full_width=FALSE)
+
+NRES=nrow(fres)
+NSIG=nrow(fsig)
+NUP=nrow(subset(fsig,ES>0))
+NDN=nrow(subset(fsig,ES<0))
+HEADER=paste(NRES,"pathways,",NSIG,"with FDR<0.05,",NUP,"up and",NDN,"down")
+
+plot(fres$ES,-log10(fres$pval),pch=19,cex=0.6,col="gray",
+  xlab="ES",ylab="-log10 p-value",main="FGSEA")
+points(fsig$ES,-log10(fsig$pval),cex=0.6,col="red",pch=19)
+mtext(HEADER)
+
+```
+
+## Finishing touches
+
+If you have gotten this far - awesome work!
+
+Automatically add a bibliography to your report using R Markdown.
+Download the desired style from GitHub [here](https://github.com/citation-style-language/styles).
+Specify this file in the YAML header, along with the BIB file.
+
+bibliography: references.bib
+csl: bmc-bioinformatics.csl
+
+Then use BibGuru or CiteDrive to get the .bib format of your articles.
+The BIB entry for the DESeq2 paper looks like this:
+
+```
+@ARTICLE{Love2014-wg,
+  title    = "Moderated estimation of fold change and dispersion for {RNA-seq}
+              data with {DESeq2}",
+  author   = "Love, Michael I and Huber, Wolfgang and Anders, Simon",
+  journal  = "Genome Biol.",
+  volume   =  15,
+  number   =  12,
+  year     =  2014,
+  language = "en"
+}
+```
+
+In the text, the article can be cited like this:`[@Love2014-wg]`
+
+Make sure you have a Bibliography sub-heading at the foot of the report.
+
+## Session information
+
+For reproducibility.
+
+```{r,sessioninfo}
+
+sessionInfo()
+
+```
