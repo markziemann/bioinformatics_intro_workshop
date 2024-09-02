@@ -1,5 +1,35 @@
+---
+title: "Bioinformatics data skills workshop - Session 8: Workflow management on HPC with SLURM"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    self_contained: yes
+    mode: selfcontained
+    toc: true
+    toc_float: true
+    code_folding: show
+    fig_width: 7
+    fig_height: 7
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+bibliography: references.bib
+csl: plos-computational-biology.csl
+---
 
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
 
+## Background
+
+Previously we containerised an R based workflow.
+It would be desirable to have workflows like this that can take advantage of the 
+many available nodes on high performance computers.
+Typically, huge workloads in genomics and bioinformatics use compiled command line tools
+written in C/rust/java.
+For example, in malaria population genomics, it might be useful to use fastq trimming tools
+to remove low quality bases before mapping the reads to the reference genome, followed by
+variant calling.
 
 ## Overview of today's activity
 
@@ -122,14 +152,10 @@ Exit and save nano with Ctrl+x.
 
 It contains the fastq sequence files, the reference genome and a few handy scripts.
 
-
 ```
 wget https://ziemann-lab.net/public/bioinfo_workshop/malaria.zip
-
 unzip malaria.zip 
-
 cd malaria
-
 ls
 ```
 
