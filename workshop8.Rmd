@@ -1,0 +1,214 @@
+
+
+
+## Overview of today's activity
+
+1. Use conda to install python, snakemake and plugin
+
+2. Set up cluster information in ~/.config/snakemake/slurm/config.yaml
+
+3. Get the "malaria" working folder which has the reference genome and raw data
+
+4. Build apptainer-based  dependencies trimmomatic, bwa, samtools and bcftools
+
+5. Write the Snakefile
+
+6. Index the reference genome
+
+7. Execute the workflow and check the results
+
+## Part 1 - Setting up Snakemake
+
+On the cluster, snakemake isn't installed, but we can use conda to do that.
+
+Let's see if conda is installed
+
+```
+module avail
+```
+
+or 
+
+```
+module spider
+```
+
+Looks like miniconda is there.
+
+```
+module load miniconda
+```
+
+This will bring us our "base" environment.
+
+We should create a named environment for a recennt Python release, where this workflow will be executed.
+
+```
+conda create -n py312 python=3.12
+```
+
+List available user environments.
+
+```
+conda env list
+```
+
+Now activate the new environment.
+
+```
+conda activate py312
+```
+
+Now snakemake can be installed here. 
+The slurm plugin will allow snakemake to use the slurm scheduler which will divide the workload over the nodes of the cluster.
+
+```
+pip install snakemake
+pip install snakemake-executor-plugin-slurm
+```
+
+Now try `snakemake -h` to how the help screen.
+
+## Part 2 - Setting up cluster information
+
+Create the folder for the configuration file to exist.
+
+```
+mkdir -p ~/.config/snakemake/slurm/
+```
+
+Now we need to create a text file.
+Here, I do it with nano.
+
+```
+nano ~/.config/snakemake/slurm/config.yaml 
+```
+
+Here is the configuration that I have been using:
+
+```
+# ~/.config/snakemake/slurm/config.yaml
+
+cluster:
+  mkdir -p logs/{rule} &&
+  sbatch
+    --partition={resources.partition}
+    --cpus-per-task={threads}
+    --mem={resources.mem_mb}
+    --time={resources.time}
+    --job-name=smk-{rule}-{wildcards}
+    --output=logs/{rule}/{rule}-{wildcards}-%j.out
+    --error=logs/{rule}/{rule}-{wildcards}-%j.err
+default-resources:
+  - partition=standard
+  - mem_mb=4000
+  - time="02:00:00"
+jobs: 100
+use-conda: true
+restart-times: 3
+max-jobs-per-second: 1
+max-status-checks-per-second: 10
+local-cores: 1
+latency-wait: 60
+keep-going: true
+rerun-incomplete: true
+printshellcmds: true
+scheduler: greedy
+```
+
+Exit and save nano with Ctrl+x.
+
+## Part 3 - Get the "malaria" working folder
+
+It contains the fastq sequence files, the reference genome and a few handy scripts.
+
+
+```
+wget https://ziemann-lab.net/public/bioinfo_workshop/malaria.zip
+
+unzip malaria.zip 
+
+cd malaria
+
+ls
+```
+
+## Part 4 - Build apptainer tools
+
+We will need to build the key dependencies that interact with the data.
+
+I have written a script that does this automatically for us.
+
+```
+cat build_deps.sh
+```
+
+You will see that each tool has a `tag` name which gives us the version number.
+
+You can see that apptainer can be used for individual small tools in this way, 
+which is different to the use last week, where we had a monolithic image that contained
+all of the apps.
+Each approach has some benefits and drawbacks.
+
+Execute the script
+
+```
+bash build_deps.sh
+```
+
+## Part 5 - Prepare the Snakefile
+
+The `Snakefile` that you see in the downloaded malaria folder details our workflow.
+
+Let's read through and understand it all.
+
+## Part 6 - Index the genome
+
+The workflow doesn't include a bwa index, so let's do that now with our bwa apptainer.
+
+With a normal bwa install it would be run like this:
+
+```
+bwa index ref/Plasmodium_falciparum.ASM276v2.dna_sm.toplevel.fa.gz
+```
+
+But with the apptainer it is done like this:
+
+```
+apptainer run --writable-tmpfs bwa.sif index ref/Plasmodium_falciparum.ASM276v2.dna_sm.toplevel.fa.gz
+```
+
+To check that the index was generated, check the files present in the ref folder:
+
+```
+ls ref
+```
+
+You should see five new files with different suffices including amb, ann, bwt, pac and sa.
+
+## Part 7 - run the whole thing
+
+If everything has been set up properly so far, you can try to execute the workflow.
+
+Firstly we will do it without SLURM scheduling, allocating 10 CPU threads on a single machine.
+
+```
+snakemake --jobs 10
+```
+
+Now we'll try running it making use of SLURM cluster, allowing distribution of jobs over
+multiple nodes.
+
+Before we do that we need to delete the recent output.
+
+```
+snakemake --delete-all-output
+snakemake --executor slurm --jobs 10 --latency-wait 60
+```
+
+## Part 8 - extending the work
+
+The pipeline stops after generating the BAM files, but a typical genomics pipeline would
+do some downstream work on it, like variant calling.
+If you want to develop your skills further, I recommend you extend the pipeline further
+by index the bam files with `samtools` and call variants with `bcftools`.
