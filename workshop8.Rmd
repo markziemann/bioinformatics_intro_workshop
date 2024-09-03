@@ -212,7 +212,7 @@ ls ref
 
 You should see five new files with different suffices including amb, ann, bwt, pac and sa.
 
-## Part 7 - run the whole thing
+## Part 7 - Run the workflow
 
 If everything has been set up properly so far, you can try to execute the workflow.
 
@@ -232,7 +232,7 @@ snakemake --delete-all-output
 snakemake --executor slurm --jobs 10 --latency-wait 60
 ```
 
-## Part 8 - extending the work
+## Part 8 - Extending the work
 
 The pipeline stops after generating the BAM files, but a typical genomics pipeline would
 do some downstream work on it, like variant calling.
