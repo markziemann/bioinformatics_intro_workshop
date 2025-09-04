@@ -4,25 +4,26 @@ author: "Burnet Bioinformatics Group"
 date: "`r Sys.Date()`"
 output:
   html_document:
+    theme: simplex
     toc: true
-    toc_float: true
     code_folding: hide
     fig_width: 7
     fig_height: 7
-  prettydoc::html_pretty:
-    theme: cayman
-    highlight: github
+    toc_float:
+      collapsed: true
 ---
 
 Source: https://github.com/markziemann/bioinformatics_intro_workshop
 
 ![Image credit: Steven Lokwan.](images/Header-Image-crop-1024x559.jpg)
 
-## Welcome
+# Welcome
+
+## Goals
 
 The goals of this workshop series are to:
 
-* Help researchers become more confident in conducting bioinformatics analysis and other
+* Help Burnet researchers become more confident in conducting bioinformatics analysis and other
 big data tasks.
 
 * To familiarise interested researchers with Burnet's high performance computing (HPC)
@@ -35,41 +36,88 @@ their work more reproducible and rigorous.
 
 ## Outline
 
-### Session 1 
+1. Getting started on the Linux command line
 
-*Unix command line basics and making your first script.*
-This will help familiarise you with the quirky yet powerful command line environment we
-regularly use in bioinformatics.
+2. Key concepts of data and code management
 
-*Data management essentials.*
-We will apply our new command line skills to carry out essential data management tasks
-like data cataloguing and backups.
+3. Introduction to R data structures and visualisation
 
-### Session 2
+4. Mastering R Studio with R Markdown reports and version control
 
-*Introduction to omics data analysis in R.*
-We will familiarise ourselves with the R statistical computing language, learn how to
-read data and conduct basic analysis, and arrange our work into reproducible reports.
+5. Intermediate R - functions, vectorization, parallel programming
 
-### Session 3
+6. Hands on omics analysis reports with R Markdown
 
-*Version control for researchers.*
-We will familiarise ourselves with using git and GitLab for maintaining our research code
-base.
-If there is time, we will learn how to use Docker to enhance reproducible computational
-research.
+7. Containers for reproducible bioinformatics
 
-### Session 4
+8. Introduction to Slurm for high performance computing
 
-*Hands-on high performance computing.*
-In this final session, we will be learning the basics of running batch scripts on Burnet's
-HPC cluster.
-There will be time set aside for attendees to write and run some scripts of their own
-research.
+9. SnakeMake and Targets for workflow management
 
-## Intro to Unix
+10. Machine learning in R with caret
 
-Before we dive in, let's clarify.
+11. Automated natural language processing with Ollama, OpenAI and Anthropic LLMs
+
+12. Streamlined proteomics analysis using FragPipe
+
+## Knowing your keyboard
+
+We use lots of special characters, so here is the vocabulary that we will use.
+
+* ! exclamation (bang)
+
+* @ at symbol
+
+* \# hash
+
+* $ dollar
+
+* % percent
+
+* ^ hat
+
+* & ampersand
+
+* \* asterix, star
+
+* ~ tilda
+
+* \- dash
+
+* \+ plus
+
+* () brackets, parentheses, round brackets
+
+* [] square brackets
+
+* {} curly brackets, braces
+
+* / slash
+
+* \\ backslash
+
+* \| pipe
+
+* "" double quotes
+
+* '' single quotes
+
+* _ underscore
+
+* ` tick
+
+* . dot
+
+* , comma
+
+* : colon
+
+* ; semicolon
+
+* ? question mark
+
+## What is Unix/Linux?
+
 Unix is an operating system developed by Bell Labs designed for other software developers.
 Initial release in 1971.
 
@@ -85,7 +133,7 @@ bioinformatics.
 It has a large and well maintained package management system, large userbase and is used on
 both servers and desktop systems.
 
-![Immage credit: Suparna Ganguly](images/distros.jpeg)
+![Image credit: Suparna Ganguly](images/distros.jpeg)
 
 The command line interface of Unix systems is called a "shell" because it is the outermost
 layer around the operating system.
@@ -103,7 +151,7 @@ act as a type of "glue" to run complex workflows.
 
 ## Setting up your command line environment
 
-You will need access to an Ubuntu command line interface for this workshop series.
+You will need access to a Linux (Ubuntu) command line interface for this workshop series.
 My recommendation is that we work on Burnet's shared computing cluster (HPC).
 The benefit of this is that those systems are administered by dedicted HPC staff, so they can
 help you resolve issues that you might encounter.
@@ -135,17 +183,19 @@ ssh -Y john.smith@burnethpc.domain.internal.burnet.edu.au
 This will only work if you are connected to the Burnet network on site, or via the VPN.
 You will be asked for your HPC password.
 
+# Gentle introduction to the Linux command line
+
+## The command prompt
+
 Once logged in you will be greeted with an active cursor, where you can start entering
 commands.
 
 ```
-john.smith@bnt-hpchn-01:~$ 
+john.smith@bnt-hpchn-01:~$
 
 ```
 
 Let's discuss the parts of this command prompt.
-
-## Shell commands
 
 Typically Unix commands have the following syntax:
 
@@ -157,6 +207,8 @@ The first word is the command itself and the last word is the input, and in betw
 will find the options.
 Options are optional, and some commands don't even require an input.
 Unlike a lot of other programming languages, the whitespaces in bash are very important.
+
+## Your first shell commands
 
 Let's start with a simple print message:
 
@@ -317,7 +369,7 @@ Provide a reproducible example for **one** of these commands.
 
 * date
 
-* cal
+* du
 
 * watch
 
@@ -358,6 +410,34 @@ Provide a reproducible example for **one** of these commands.
 * column
 
 * seq
+
+## Navigating your home directory
+
+As an exercise, follow the steps:
+
+1. Create a directory called bioinfo_workshop and `cd` into it.
+
+2. Then create a new directory called "session01" and `cd` into that.
+
+3. Use `nano` to create a text file called mytestfile.txt and put a few lines of text
+in it.
+
+4. Try the following commands on the file:
+  * cat
+  * less
+  * wc
+  * sort
+  * cp (copy the file to another name, like mytestfile2.txt)
+  * mv (move the file or change the name)
+  * rm (remove the duplicate file)
+  * sort
+  * du
+
+5. Then use `cd ..` or `cd ~` to return to your home directory.
+
+6. Navigate again to the "session01" directory, but use autocomplete with the `cd` command
+For example, from the home directory, type "cd bio" and then hit the tab key, it should
+autocomplete the rest of the long name, saving you time and being more precise.
 
 ## Writing your first script
 
@@ -450,6 +530,14 @@ if [ ! -r output.txt ] ; then echo "Output not present!" ; fi
 
 ```
 
+In a script, it is normally written like this:
+
+```
+if [ ! -r output.txt ] ; then
+  echo "Output not present!"
+fi
+```
+
 We can add an `else` operator to deal with the alternative possibilities.
 
 ```
@@ -461,12 +549,22 @@ if [ -r output.txt ] ; then echo "Output is present!" ; else echo "Output not pr
 
 ```
 
+In a script, if/else commands are normally written like this:
+
+```
+if [ -r output.txt ] ; then
+  echo "Output is present!"
+else
+  echo "Output not present"
+fi
+```
+
 Your other homework exercise is to write a new script that combines if statements and for
 loops.
 For example, you can use a for loop to generate and save a value of $RANDOM, then use an if
 statement to check whether it is larger than an arbitrary value like 20,000.
 
-## NCBI BLAST Example
+# A practical example with NCBI BLAST
 
 Now that we have done some introductory things, let's do some actual bioinformatics using
 the classic BLAST tool.
@@ -477,7 +575,7 @@ We will begin by downloading the full *E. coli* genome, uncompressing the file a
 a BLAST index.
 
 ```
-wget -N "https://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/dna/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz"
+wget -N --no-check-certificate "https://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/dna/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz"
 
 gunzip -kf Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz
 
@@ -491,7 +589,7 @@ We will download the full set of *E. coli* coding sequences and select a few for
 BLAST.
 
 ```
-wget -N "https://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/cds/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz"
+wget -N --no-check-certificate "https://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/cds/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz"
 
 gunzip -kf Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz
 
@@ -507,7 +605,7 @@ Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa \
 
 ```
 
-Use `head` to viaualise the contents of the unwrapped fasta file.
+Use `head` to visaualise the contents of the unwrapped fasta file.
 
 Then sample the first 5 sequences to another file called `sample.fa`
 
@@ -572,7 +670,7 @@ Here's the [answer](https://www.metagenomics.wiki/tools/blast/blastn-output-form
 
 Can you interpret what the results mean?
 
-## Further exercise: determine the limits of BLASTN
+# Further exercise: determine the limits of BLASTN
 
 Point mutations (base substitutions) make it more difficult for BLAST to find the sequence in
 the genome.
