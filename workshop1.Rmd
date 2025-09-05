@@ -92,6 +92,8 @@ We use lots of special characters, so here is the vocabulary that we will use.
 
 * {} curly brackets, braces
 
+* <> angled brackets
+
 * / slash
 
 * \\ backslash
@@ -153,7 +155,7 @@ act as a type of "glue" to run complex workflows.
 
 You will need access to a Linux (Ubuntu) command line interface for this workshop series.
 My recommendation is that we work on Burnet's shared computing cluster (HPC).
-The benefit of this is that those systems are administered by dedicted HPC staff, so they can
+The benefit of this is that those systems are administered by dedicated HPC staff, so they can
 help you resolve issues that you might encounter.
 Follow the instructions [here](http://burnethpcdocs.domain.internal.burnet.edu.au/getting-started)
 to request access.
@@ -605,7 +607,7 @@ Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa \
 
 ```
 
-Use `head` to visaualise the contents of the unwrapped fasta file.
+Use `head` to visualise the contents of the unwrapped fasta file.
 
 Then sample the first 5 sequences to another file called `sample.fa`
 
