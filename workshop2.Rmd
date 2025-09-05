@@ -21,7 +21,7 @@ Source: https://github.com/markziemann/bioinformatics_intro_workshop
 
 As a scientist, maintenance of our data and code are among our most crucial responsibilities.
 Failing to do so can have dramatic consequences for our careers, our colleagues and for
-the institue as a whole.
+the institute as a whole.
 
 Do you know the minimum requirements for biomedical research data and code preservation in
 Australia?
@@ -169,7 +169,7 @@ Every file or piece of data can generate a checksum or a type of fingerprint, wh
 distinctive.
 Two different files having the same checksum are very rare.
 
-We can uset the `md5sum` command to obtain a checksum.
+We can use the `md5sum` command to obtain a checksum.
 
 ```
 md5sum 100507_R*fq.gz
@@ -333,7 +333,7 @@ Keep in mind that making read-only doesn't protect against some operations.
 For example you can still rename it or move it to another location, and deletion with
 `rm -f` will still work.
 
-To mititgate this, consider making files immutable using the `chattr` command.
+To mitigate this, consider making files immutable using the `chattr` command.
 It may require `sudo`, so may not be that useful for the HPC cluster.
 
 ```
@@ -358,7 +358,7 @@ embargo period will end and the data will become public.
 Winding down a project can take a few phases, and the data management plan should be followed.
 Identify the data you want to keep forever; this should include management documents like
 ethics applications and decisions around authorship which should be part of your lab notebook
-and able to be accessed by the intitution already.
+and able to be accessed by the institution already.
 Code should be considered a separate and special data form and will be stored permanently.
 Identify the files that can be safely deleted.
 This could include intermediate files which can be easily regenerated using the scripts.
@@ -382,7 +382,7 @@ mistakes can happen with files and the codes can be lost.
 To avoid code loss we might even have multiple versions of a script in the folder with
 different names eg: myscript.sh, myscript2.sh, myscript2final.sh, etc.
 This issue is even worse for collaborations where the project folder is not shared and the
-researchers send eachother scripts and code over email or some other medium.
+researchers send each other scripts and code over email or some other medium.
 In short, research project code can get messy very quickly, increasing the chance for
 mistakes.
 This is a prime reason why version control systems were developed.
@@ -570,7 +570,7 @@ Add the public key, and then proceed to use the workflow above, by:
 
 6. Using issues to manage work items
 
-## Publishing code supporing your project
+## Publishing code supporting your project
 
 The 10 year challenge has shown the difficulty of reproducing work over long timeframes.
 GitHub and GitLab may not exist in 10 years, due to the commercial viability of Microsoft
