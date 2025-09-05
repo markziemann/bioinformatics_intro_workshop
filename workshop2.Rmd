@@ -4,14 +4,13 @@ author: "Burnet Bioinformatics Group"
 date: "`r Sys.Date()`"
 output:
   html_document:
+    theme: simplex
     toc: true
-    toc_float: true
     code_folding: hide
     fig_width: 7
     fig_height: 7
-  prettydoc::html_pretty:
-    theme: cayman
-    highlight: github
+    toc_float:
+      collapsed: true
 ---
 
 Source: https://github.com/markziemann/bioinformatics_intro_workshop
@@ -29,19 +28,20 @@ Australia?
 
 Let's take a look at the [NHMRC Management of Data and Information in Research guidelines](https://www.nhmrc.gov.au/sites/default/files/documents/attachments/Management-of-Data-and-Information-in-Research.pdf).
 
-We won't write up a plan in today's session, but it should be something you should address
-to remain in compliance with Burnet and funder guidelines.
+We won't write up a data management plan in today's session, but it should be something you
+should address to remain in compliance with Burnet and funder guidelines.
 
 Reflect on your past work from 5 years ago and tell me whether it is compliant with mandates.
 
 Data management is also important for reproducibility.
 Is your past computational work reproducible?
+Could you pass the [10 year challenge](https://www.nature.com/articles/d41586-020-02462-7)?
 
 How do you think we can make our work more robust and reproducible?
 
 Let's take a look at a blog post on this topic from Prof Altuna Akalin, a prominent
 bioinformatician
-([link](https://towardsdatascience.com/scientific-data-analysis-pipelines-and-reproducibility-75ff9df5b4c5)).
+([link](https://medium.com/data-science/scientific-data-analysis-pipelines-and-reproducibility-75ff9df5b4c5)).
 
 ## A look at best practices
 
@@ -53,7 +53,9 @@ Some relatively simple rules we can adopt to enhance reproducibility of our work
 
 * [Ten Simple Rules for Creating a Good Data Management Plan](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004525)
 
-Conducting bioinformatics work on dedicated, on premises hardware is recommended.
+* [The five pillars of computational reproducibility: bioinformatics and beyond](https://academic.oup.com/bib/article/24/6/bbad375/7326135)
+
+Storing data and conducting bioinformatics work is recommended on dedicated on premises hardware.
 Can you think of some reasons why that would be preferred?
 
 ## Organising your projects
@@ -79,23 +81,34 @@ Let's take a look at the lifecycle of research project data.
 
 * Back-up
 
-* Storage, usage
+* Storage and usage
 
 * Disseminate
 
 * Close
 
-We will draft a data management plan later, but for now let's focus on the mechanics of
+We will draft a data management plan later, but for now let's focus on the practical aspects of
 data handling on Linux systems.
+
+<img src="https://m.media-amazon.com/images/I/71rDs-OMjBL._SL1100_.jpg" alt="Data Management for Researchers, By Kristin Briney." width="300" height="400" />
+Further reading: Data Management for Researchers, By Kristin Briney.
 
 ## Receive data
 
 There are different ways to receive bioinformatics data.
 One way is over the internet with a variety of protocols.
 It could be over https, ftp, sftp, scp, rsync or others.
-It could be a physical hard drive.
 
-The two most important approaches are `scp` and `rsync`.
+Practice by downloading two fastq files to a new working directory:
+
+```
+wget https://ziemann-lab.net/public/bioinfo_workshop/100507_R1.fq.gz
+wget https://ziemann-lab.net/public/bioinfo_workshop/100507_R2.fq.gz
+```
+
+You could also be given a physical hard drive, then you need to transfer the data from your PC to
+your server.
+The two most important approaches to data transfer are `scp` and `rsync`.
 `scp` is short for secure copy and is a version of `cp` that works over ssh.
 `scp` is fairly easy to use, but is not suited to large files or unstable connections.
 If a connection is interrupted, it will leave partial files.
@@ -177,7 +190,7 @@ Download the md5sums corresponding to the original files and check whether the n
 files are the same.
 
 ```
-wget https://ziemann-lab.net/public/tmp/checksums.md5
+wget https://ziemann-lab.net/public/bioinfo_workshop/checksums.md5
 
 ```
 
@@ -360,7 +373,9 @@ people and institutions.
 Research work is also very unpredictable, problems emerge all the time and we typically
 publish only a small fraction of the data/results we generate.
 
-![Itai Yanai: false directions are common in research](images/projectpath.png)
+<img src="images/projectpath.png" alt="Itai Yanai: false directions are common in research" width="450" height="300" />
+
+Itai Yanai: false directions are common in research.
 
 If you have worked in a team sharing a common data and analysis folder, you will know that
 mistakes can happen with files and the codes can be lost.
@@ -376,7 +391,10 @@ development because each collaborator has their own copy of the repository and t
 contribute their changes to the main repository, from which the other contributors fetch the
 latest changes.
 
-![Distributed version control. (A) Each author has a copy of the repository where their contributions are committed before being pushed to the main central repository. (B) An example hypothetical git workflow history for a research project involving a team of three authors. Circles represent code commits. Path divergences create separate branches for independent development. Horizontal paths indicate code changes for a particular branch. Path convergences indicate where branch specific differences are incorporated into the main branch.](images/dvcs.png)
+<img src="images/dvcs.png" alt="Distributed version control. (A) Each author has a copy of the repository where their contributions are committed before being pushed to the main central repository. (B) An example hypothetical git workflow history for a research project involving a team of three authors. Circles represent code commits. Path divergences create separate branches for independent development. Horizontal paths indicate code changes for a particular branch. Path convergences indicate where branch specific differences are incorporated into the main branch." width="500" height="350"/>
+
+Distributed version control. (A) Each author has a copy of the repository where their contributions are committed before being pushed to the main central repository. (B) An example hypothetical git workflow history for a research project involving a team of three authors. Circles represent code commits. Path divergences create separate branches for independent development. Horizontal paths indicate code changes for a particular branch. Path convergences indicate where branch specific differences are incorporated into the main branch.
+
 
 Even if you are working alone, DVCS provides several benefits:
 
