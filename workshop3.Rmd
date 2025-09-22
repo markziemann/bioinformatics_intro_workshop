@@ -69,7 +69,7 @@ parallel compression tool.
 This will use all available CPU threads.
 
 ```
-head -1000000 /dev/random | pigz > /dev/null
+head -1000 /dev/random | pigz -p2 > /dev/null
 ```
 
 If you want to run some scripts, you will likely need to load modules.
@@ -105,7 +105,7 @@ Non interactive jobs can be scheduled using SLURM, using the [HPC docs](http://b
 Rstudio offers some benefits due to its interactive and graphical nature.
 
 ```
-sbatch --time=180 --threads=2 --mem=8G  /software/jobs/rstudio.job
+sbatch --time=180 --threads=2 --mem=8G  /software/jobs/rstudio_4.4.job
 ```
 
 It will say "Submitted batch job 1234" (the number will be different),
