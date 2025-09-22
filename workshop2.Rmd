@@ -6,7 +6,7 @@ output:
   html_document:
     theme: simplex
     toc: true
-    code_folding: hide
+    code_folding: show
     fig_width: 7
     fig_height: 7
     toc_float:
@@ -427,9 +427,11 @@ It is a good idea to regularly mirror the code to Burnet's GitLab (explained bel
 An SSH key can be generated using the command ([source](https://www.brandonchecketts.com/archives/its-2023-you-should-be-using-an-ed25519-ssh-key-and-other-current-best-practices)):
 
 ```
-ssh-keygen -t ed25519 -f ~/.ssh/your-key-filename -C "your-key-comment"
+ssh-keygen -t ed25519 -f ~/.ssh/ed25519 -C "your-key-comment"
 
 ```
+
+If you already have an ed25519 key, then use a different unique name.
 
 Optional: Add a passphrase.
 
