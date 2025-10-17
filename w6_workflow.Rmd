@@ -1,0 +1,253 @@
+---
+title: "Workshop6 lung cancer RNA-seq"
+author: "Mark Ziemann"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    fig_width: 7
+    fig_height: 7
+theme: cosmo
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+## Introduction
+
+In this workshop, we will start working on some RNA-seq data. Here is the citation:
+
+Cho JW, Shim HS, Lee CY, Park SY et al. The importance of enhancer methylation for epigenetic regulation of tumorigenesis in squamous lung cancer. Exp Mol Med 2022 Jan;54(1):12-22. PMID: 34987166
+
+```{r setup}
+
+# install CRAN packages
+#install.packages(c("kableExtra","gplots"))
+
+# install bioconductor packages
+#if (!require("BiocManager", quietly = TRUE))
+#    install.packages("BiocManager")
+#BiocManager::install(c("DESeq2","fgsea"))
+
+suppressPackageStartupMessages({
+  library("kableExtra")
+  library("DESeq2")
+  library("gplots")
+  library("fgsea")
+})
+
+```
+
+## Download gene expression counts and read the file
+
+Download from NCBI.
+
+```{r,dl}
+
+DATA="GSE158420.counts.txt.gz"
+
+if ( ! file.exists(DATA) ) {
+  download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE158420&format=file&file=GSE158420%5Fcounts%2Etxt%2Egz",
+    destfile=DATA)
+}
+
+```
+
+Read data.
+Note that there are a couple of duplicated gene symbols.
+Here I use `aggregate()` command to deal with them.
+
+```{r,read_data}
+
+mx <- read.table(DATA,row.names = NULL)
+str(mx)
+which(duplicated(mx$row.names))
+xa <- aggregate(. ~ row.names,mx,sum)
+rownames(xa) <- xa$row.names
+str(xa)
+xa$row.names = NULL
+
+head(xa)
+
+```
+
+## Basic QC - number of reads per sample
+
+Less than 10 million is not acceptable. More than 20 million is considered good.
+
+```{r,sample_count_qc,fig.width=5,fig.height=5}
+
+mycolsums <- colSums(xa)
+
+mycolsums
+summary(mycolsums)
+mycolsums <- sort(mycolsums)
+head(mycolsums,10)
+tail(mycolsums,10)
+barplot(mycolsums)
+
+
+barplot(head(mycolsums))
+
+```
+
+# Does this dataset need filtering of lowly expressed genes?
+
+There are ~60k genes in the main annotation sets.
+We can count the number of rows to see how many genes included in this dataset.
+
+I also run my own threshold, which is average of 10 reads per sample.
+
+```{r,lowgenes}
+
+dim(xa)
+hist(rowMeans(xa))
+table(rowMeans(xa)>=10)
+
+xf <- xa[which(rowMeans(xa)>=10),]
+dim(xa)
+dim(xf)
+
+```
+
+# Principal component analysis
+
+Use PCA to understand the overall variation between samples in the dataset.
+
+```{r,pca1,fig.height=7}
+
+mds <- cmdscale(dist(t(scale(xf))),k=10)
+barplot(colSums(abs(mds)),names.arg = 1:10)
+
+head(mds)
+
+plot(mds[,1:2],pch=19,col="gray",
+     main="Dim 1 and 2",xlab="PCA1",ylab="PCA2")
+text(mds[,1],mds[,2],labels = colnames(xf))
+
+plot(mds[,c(1,3)],pch=19,col="gray",
+      main="Dim 1 and 3",xlab="PCA1",ylab="PCA3")
+text(mds[,1],mds[,3],labels = colnames(xf))
+
+plot(mds[,2:3],pch=19,col="gray",
+      main="Dim 2 and 3",xlab="PCA2",ylab="PCA3")
+text(mds[,2],mds[,3],labels = colnames(xf))
+
+```
+
+# Curate samplesheet
+
+The samplesheet is the sample level metadata, which we need for the differential expression step.
+
+```{r,ss}
+
+ss <- as.data.frame(colnames(xa))
+head(ss)
+
+ss$tumor <- as.numeric(grepl("T",ss[,1]))
+
+ss$patient <- gsub("T","" , gsub("N","",ss[,1]))
+
+rownames(ss) <- ss[,1]
+
+head(ss)
+
+```
+
+## DE
+
+We will use DESeq2 for differential expression.
+
+```{r,de1}
+
+dds <- DESeqDataSetFromMatrix(countData = xf , colData=ss, design = ~ patient + tumor)
+res <- DESeq(dds)
+z <- results(res)
+vsd <- vst(dds, blind=FALSE)
+zz <- cbind(as.data.frame(z),assay(vsd))
+dge <- as.data.frame(zz[order(zz$pvalue),])
+
+head(dge) |> kbl(caption="Top significant genes") |> kable_paper("hover", full_width = F)
+
+```
+
+## Heatmap visualisation
+
+Heatmaps are great for showing high dimensional data.
+
+```{r,hm1}
+
+topgenes <- head(rownames(dge),50)
+
+colfunc <- colorRampPalette(c("blue", "white", "red"))
+
+rpm <- apply(xf,2,function(x) {x/sum(x) * 1e6 } )
+
+top <- rpm[which(rownames(rpm) %in% topgenes),]
+
+csc = as.character(ss$tumor)
+
+heatmap.2(as.matrix(top),trace="none",col=colfunc(25),scale="row",
+    margins = c(6,6), cexRow=0.6, cexCol=0.3, ColSideColors=csc )
+
+```
+
+## Pathway enrichment analysis
+
+Here, we'll use the fgsea package on Reactome pathways.
+
+```{r,fgsea1}
+
+GMT="ReactomePathways_2025-10-15.gmt"
+
+if ( ! file.exists(GMT) ) {
+  download.file("https://ziemann-lab.net/public/bioinfo_workshop/ReactomePathways_2025-10-15.gmt",
+    destfile=GMT)
+}
+
+gs <- gmtPathways("ReactomePathways_2025-10-15.gmt")
+head(gs,3)
+
+dge$stat[which(is.na(dge$stat))] <- 0 # substitute 0 for NA vals
+
+stat <- dge$stat #use DESeq2 test stat for ranking genes
+names(stat) <- rownames(dge) #attach gene names to values
+
+fres <- fgsea(pathways=gs,stats=stat,minSize=5, nproc=4) #run fgsea
+
+fsig <- subset(fres,padj<0.05) # subset significant sets
+nrow(fsig)
+
+fres <- fres[order(-abs(fres$ES)),]
+
+head(subset(fres,padj<0.05 & ES>0),20) %>%
+  kbl(caption="mRNA upregulated pathways") %>%
+  kable_styling("hover",full_width=FALSE)
+
+head(subset(fres,padj<0.05 & ES<0),20) %>%
+  kbl(caption="mRNA downregulated pathways") %>%
+  kable_styling("hover",full_width=FALSE)
+
+NRES=nrow(fres)
+NSIG=nrow(fsig)
+NUP=nrow(subset(fsig,ES>0))
+NDN=nrow(subset(fsig,ES<0))
+HEADER=paste(NRES,"pathways,",NSIG,"with FDR<0.05,",NUP,"up and",NDN,"down")
+
+plot(fres$ES,-log10(fres$pval),pch=19,cex=0.6,col="gray",
+  xlab="ES",ylab="-log10 p-value",main="FGSEA")
+points(fsig$ES,-log10(fsig$pval),cex=0.6,col="red",pch=19)
+mtext(HEADER)
+
+```
+
+## Session information
+
+```{r,session}
+
+save.image("w6_workflow.Rdata")
+
+sessionInfo()
+
+
+```
