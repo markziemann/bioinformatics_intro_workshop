@@ -34,6 +34,7 @@ suppressPackageStartupMessages({
   library("DESeq2")
   library("gplots")
   library("fgsea")
+  library("beeswarm")
 })
 
 ```
@@ -189,6 +190,29 @@ csc = as.character(ss$tumor)
 
 heatmap.2(as.matrix(top),trace="none",col=colfunc(25),scale="row",
     margins = c(6,6), cexRow=0.6, cexCol=0.3, ColSideColors=csc )
+
+```
+
+You may want to look at a few genes in more detail.
+
+```{r,bs1}
+
+set.seed(42)
+myrows <- sample(1:nrow(top),6)
+
+par(mfrow=c(2,3))
+
+nullplot <- lapply(myrows,function(i) {
+  nam=rownames(top)[i]
+  gdata <- top[i,]
+  ndat <- gdata[grep("N",names(gdata))]
+  tdat <- gdata[grep("T",names(gdata))]
+  plotdat <- list("non-tumor"=ndat,"tumor"=tdat)
+  boxplot(plotdat,ylab="normalised expression (RPM)",cex=0,col="white",main=nam)
+    beeswarm(plotdat,add=TRUE,cex=0.9,pch=19)
+})
+
+par(mfrow=c(1,1))
 
 ```
 
