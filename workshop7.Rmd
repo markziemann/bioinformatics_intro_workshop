@@ -251,17 +251,29 @@ If you get an error, try replacing `--writable` with `--writable-tmpfs`.
 You will hopefully find yourself with a bash prompt in the Apptainer.
 Use `ls` to see the contents of the folder, you will hopefully see the R Markdown file.
 
-To execute it, open an R command line and use the following command, substituting the name
+To execute it directly from the shell, you can run this command, substituting the name of your Rmd file:
+
+```
+Rscript -e "rmarkdown::render('w6_workflow.Rmd')"
+```
+
+Alternatively, you can open an R command line with `R`, then use the following command, substituting the name
 of the R Markdown file.
 
 ```
 rmarkdown::render("myworkflow.Rmd")
 ```
 
-From here, the results can be copied to the host filesystem like this:
+From R, the results can be copied to the host filesystem like this:
 
 ```
 file.copy("myworkflow.html","~/projects/myproject/")
+```
+
+From the shell command line, results can be copied like this:
+
+```
+cp myworkflow.html ~/projects/myproject
 ```
 
 Note that Apptainer automatically mounts the user's home directory in the container, which
