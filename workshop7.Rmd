@@ -37,10 +37,10 @@ not exactly defined.
 
 Although it is common practice to describe major version of our software stack including
 Python, R and packages in publications, there are still cases where differences in system
-dependancies impact final results [@Vallet2022-ut].
+dependancies impact final results [@vallet2022toward].
 
 In order to make the work reproducible, we need to capture the computing environment.
-This can be done with virtual machines and containers.
+This can be done with virtual machines and containers [@gruning2018practical;@ziemann2023five].
 Virtual machines are the ability to run a full operating system (guest) within another
 system (host).
 These require a lot of drive space and incur high compute overhead in terms of memory and
@@ -137,7 +137,7 @@ Inspect the html and fix any issues now.
 
 ## Customising your container image
 
-If you need R in your image, my recommendation is to start with an immage that already has R.
+If you need R in your image, my recommendation is to start with an image that already has R.
 Thankfully, there are many options:
 
 * [Rocker](https://hub.docker.com/r/rocker/rstudio) - which has R and Rstudio installed.
@@ -154,9 +154,13 @@ then it installs R packages from CRAN and then Bioconductor.
 After all that stuff is installed, it then clones the project repo from GitHub.
 So that project repo will need to exist and be publicly available.
 
+Copy the codes below into a file called `Apptainer.def` using `nano` or another text editor.
+If you are using git to track your code changes, then change the git address to your repo,
+otherwise delete that line.
+
 ```
 BootStrap: docker
-From: bioconductor/bioconductor_docker:RELEASE_3_19
+From: bioconductor/bioconductor_docker:RELEASE_3_20
 
 %post
   # Update apt-get
@@ -193,7 +197,7 @@ From: bioconductor/bioconductor_docker:RELEASE_3_19
 
 %labels
    Author Mark Ziemann
-   Date 22 Aug 2024
+   Date 21 Oct 2025
 ```
 
 If you don't want to use GitHub resource like this, you can replace that line with a new
@@ -206,7 +210,22 @@ myproject /
 
 It will copy the myproject folder to the root directory of the image.
 
-Save the definition file as `Apptainer.def`.
+## Get HPC session
+
+Create a tmux session so that your session is not cancelled when disconnecting SSH.
+If you have not used tmux before here is a [blog post](https://genomespot.blogspot.com/2020/05/managing-linux-shell-sessions-with-tmux.html) showing the key commands.
+
+```
+tmux new -s myworkflow
+```
+
+Before we launch into analysis we need to provision ourselves an interactive session on the hpc.
+
+The following command will give you an interactive session with 4 cores, 16 GB RAM for 24 hrs.
+
+```
+srun -c 4 -p long --mem 16G --time 1-00:00:00 -I60 -N 1 -n 1 --pty bash -i
+```
 
 ## Build with Apptainer
 
@@ -220,22 +239,6 @@ It will create a singularity image file (sif).
 While the `def` file is very small, like 4 kB, the image could be up to 2 GB in size.
 
 ## Launch the Apptainer
-
-And once the image is built, we can start running the workflow.
-But before we do that we need to provision ourselves an interactive session on the hpc.
-
-The following command will give you an interactive session with 4 cores, 16 GB RAM for 24 hrs.
-
-```
-srun -c 4 -p long --mem 16G --time 1-00:00:00 -I60 -N 1 -n 1 --pty bash -i
-```
-
-Now create a tmux session so that your session is not cancelled when disconnecting SSH.
-If you have not used tmux before here is a [blog post](https://genomespot.blogspot.com/2020/05/managing-linux-shell-sessions-with-tmux.html) showing the key commands.
-
-```
-tmux new -s myworkflow
-```
 
 Now you can launch the image and start interacting with it using
 bash.
@@ -283,7 +286,7 @@ Upload it to LabArchives.
 Loading big datasets into the container is another challenge which has a few different
 solutions:
 
-* Download from central repository
+* Download from a central repository
 
 * Obtain from home directory
 
@@ -314,3 +317,5 @@ For reproducibility.
 sessionInfo()
 
 ```
+
+## Bibliography
