@@ -1,5 +1,5 @@
 ---
-title: "Bioinformatics data skills workshop - Session 8: Introduction to Slurm for high performance computing"
+title: "Bioinformatics data skills workshop - Session 9: SnakeMake and Targets for workflow management"
 author: "Burnet Bioinformatics Group"
 date: "`r Sys.Date()`"
 output:

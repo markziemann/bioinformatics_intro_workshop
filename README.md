@@ -25,6 +25,12 @@ into the more intermediate topics that enhance research practices.
 
 7. Containers for reproducible bioinformatics
 
-8. Introduction to workflow management systems
+8. Introduction to Slurm for high performance computing
 
+9. Introduction to workflow management systems
 
+10. Machine learning in R with caret
+
+11. Automated natural language processing with Ollama, OpenAI and Anthropic LLMs
+
+12. Streamlined proteomics analysis using FragPipe
