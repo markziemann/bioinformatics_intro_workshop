@@ -4,16 +4,13 @@ author: "Burnet Bioinformatics Group"
 date: "`r Sys.Date()`"
 output:
   html_document:
-    self_contained: yes
-    mode: selfcontained
+    theme: simplex
     toc: true
-    toc_float: true
     code_folding: show
     fig_width: 7
     fig_height: 7
-  prettydoc::html_pretty:
-    theme: cayman
-    highlight: github
+    toc_float:
+      collapsed: true
 ---
 
 Source: https://github.com/markziemann/bioinformatics_intro_workshop
