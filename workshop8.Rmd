@@ -191,7 +191,7 @@ for SEQ in seqchunk.fa* ; do
   SEQ2=$(echo $SEQ | sed 's/seqchunk.fa/seqchunk2.fa/')
   sed 's/\t/\n/g' $SEQ | grep -v ^$ > $SEQ2
 done
-``
+```
 
 Now run a blast search with one of the fasta files.
 
@@ -304,7 +304,7 @@ Your task is to make a script `main.sh` that does:
 
 Finally, check the logs to ensure all jobs completed properly.
 
-## Before we go
+## One more thing
 
 Another use of SLURM job arrays is to test a range of parameters for testing.
 
