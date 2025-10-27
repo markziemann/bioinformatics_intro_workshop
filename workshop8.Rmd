@@ -303,3 +303,22 @@ Your task is to make a script `main.sh` that does:
 * Downstream: reads all the results files and counts how many sequences have 2 or more hits.
 
 Finally, check the logs to ensure all jobs completed properly.
+
+## Before we go
+
+Another use of SLURM job arrays is to test a range of parameters for testing.
+
+For simulations where you need to repeat a routine many times, this can be used to
+specify a set seed for pseudorandom sampling.
+
+Here is an example of a parameter called ALPHA being substituted.
+
+```
+# ----------------------------------------------------------------------
+# Example 2: Use different parameters for each task
+# ----------------------------------------------------------------------
+# You can also use the array index to set different parameters
+ALPHA_VALUES=(0 0.1 0.5 1.0 2.0 5.0)
+ALPHA=${ALPHA_VALUES[$SLURM_ARRAY_TASK_ID]}
+echo "Using parameter alpha = ${ALPHA}"
+```
