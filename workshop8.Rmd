@@ -20,32 +20,88 @@ csl: plos-computational-biology.csl
 
 Source: https://github.com/markziemann/bioinformatics_intro_workshop
 
+![Image credit: Futurama.](https://static.wikia.nocookie.net/enfuturama/images/8/80/Slurm-1-.jpg/revision/latest?cb=20060626052801)
+
 ## Background
 
-Previously we containerised an R based workflow.
-It would be desirable to have workflows like this that can take advantage of the 
-many available nodes on high performance computers.
-Typically, huge workloads in genomics and bioinformatics use compiled command line tools
-written in C/rust/java.
-For example, in malaria population genomics, it might be useful to use fastq trimming tools
-to remove low quality bases before mapping the reads to the reference genome, followed by
-variant calling.
+Previously we ran a fairly lightweight R based workflow on HPC, but bioinformatics can
+also involve computationally intensive jobs such as processing terabytes of raw data
+from hundreds of samples, or characterising interactions between millions of SNPs.
+
+In contrast to what we've done previously, this intensive work can be divided into many
+smaller and more manageable steps.
+These steps can be distributed across many machines in a HPC/supercomputer to expedite
+the work.
+
+HPC clusters use schedulers to decide what jobs are able to run and they are designed to
+distribute resources in a fair way while optimising utilisation.
+Typically, jobs are allocated until resources are at capacity and then jobs are placed in
+a queue.
+There are a few different schedulers including Sun Grid Engine, PBS and Slurm.
+Today we'll be using Slurm.
+
+Jargon that we'll be using:
+
+* Head node: when you log into a HPC it is typically into a head node.
+Don't run any heavy analysis here.
+It is typically used for lightweight stuff like viewing, organising and transfering
+files/results.
+
+* Cluster: A bunch of computers all connected to a central scheduler.
+
+* Batch: a set of computational tasks that will be distributed.
+
+* Job: Non-interactive computational task - eg: a script.
+Jobs are typically submitted in batches.
+
+* Compute node: A computer in the cluster whose purpose is to run jobs.
+Clusters have many compute nodes and different types such as high RAM, GPU or specific
+CPU architecture.
+
+* Cores/threads: A modern computer typically has multiple CPU cores, processors that are
+able to do independent tasks.
+Laptops may have 2-8 cores and high end servers may have 64 or more.
+Most CPUs also have a feature called hyperthreading, which allows each CPU to process two
+parallel tasks (threads).
+
+* Parallel processing: As a modern computer has many CPU threads, jobs can be distributed
+across threads of a machine.
+But there is some overhead cost to this, so jobs of 8-16 threads seem to perform well and
+beyond 32, there's little benefit to adding further parallel threads.
+
+* Pipeline: A set of scripts that involves set-up of the jobs, execution and collection of
+the results.
+
+* I/O: Input/output operations, such as reading data from disk or SSD.
+Given the data-intensive nature of modern bioinformatics, I/O performance is just as
+important as CPU performance.
+
+* Memory: The amount of RAM allocated for the task.
+It is important that you know how much RAM will be used for your tasks, as this is a key
+scarce resource on many HPC systems.
+
+* Storage: Data storage space. This may be have certain quotas and limitations on some HPCs.
+
+* CPU Cache: This is the amount of short term memory that is on the CPU.
+A larger cache allows the CPU to do more work per cycle, and so having a higher cache
+gives better performance.
+
+Before we jump into today's task - take a look at Burnet's HPC documentation:
+http://burnethpcdocs.domain.internal.burnet.edu.au/getting-started
 
 ## Overview of today's activity
 
-1. Use conda to install python, snakemake and plugin
+In the example workflow, we'll demonstrate how to distribute BLAST searches over several
+worker nodes.
+But we will build up our workflow from the basics using these steps:
 
-2. Set up cluster information in ~/.config/snakemake/slurm/config.yaml
+1. Make an interactive session to confirm a small analysis script works properly.
 
-3. Get the "malaria" working folder which has the reference genome and raw data
+2. Use the scheduler to process a few small datasets.
 
-4. Build apptainer-based  dependencies trimmomatic, bwa, samtools and bcftools
+3. Scale-up the job to complete the task efficiently.
 
-5. Write the Snakefile
-
-6. Index the reference genome
-
-7. Execute the workflow and check the results
+4. Collect the results for downstream analysis.
 
 ## Part 1 - Setting up Snakemake
 
