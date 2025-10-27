@@ -103,194 +103,203 @@ But we will build up our workflow from the basics using these steps:
 
 4. Collect the results for downstream analysis.
 
-## Part 1 - Setting up Snakemake
+## Part 1 - Setting up an interactive script
 
-On the cluster, snakemake isn't installed, but we can use conda to do that.
+Start an interactive session with 4 threads and 16 GB RAM for 3 hours.
 
-Let's see if conda is installed
+We need some input files for BLAST to work.
+Inside a new working folder, run the following `bash` chunks.
 
-```
-module avail
-```
-
-or 
+First for the genome reference.
 
 ```
-module spider
-```
+wget -N --no-check-certificate "https://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/dna/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz"
 
-Looks like miniconda is there.
+gunzip -kf Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz
 
-```
-module load miniconda
-```
-
-This will bring us our "base" environment.
-
-We should create a named environment for a recennt Python release, where this workflow will be executed.
+makeblastdb -dbtype nucl -in Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa -input_type fasta -parse_seqids -title ecoli
 
 ```
-conda create -n py312 python=3.12
-```
 
-List available user environments.
+Now for the set of annotated genes.
 
 ```
-conda env list
-```
+wget -N --no-check-certificate "https://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/cds/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz"
 
-Now activate the new environment.
+gunzip -kf Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz
 
-```
-conda activate py312
-```
-
-Now snakemake can be installed here. 
-The slurm plugin will allow snakemake to use the slurm scheduler which will divide the workload over the nodes of the cluster.
+perl -pe '/^>/ ? print "\n" : chomp' \
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa \
+> Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.unwrap.fa
 
 ```
-pip install snakemake
-pip install snakemake-executor-plugin-slurm
-```
 
-Now try `snakemake -h` to how the help screen.
-
-## Part 2 - Setting up cluster information
-
-Create the folder for the configuration file to exist.
+Your folder should look like this:
 
 ```
-mkdir -p ~/.config/snakemake/slurm/
+$ ls
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.unwrap.fa
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.ndb
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.nhr
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.nin
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.nog
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.nos
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.not
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.nsq
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.ntf
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.nto
 ```
 
-Now we need to create a text file.
-Here, I do it with nano.
+Great, now we can subset a few sequences.
 
 ```
-nano ~/.config/snakemake/slurm/config.yaml 
+sed 1d Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.unwrap.fa \
+| head > sample.fa
 ```
 
-Here is the configuration that I have been using:
+Then perform a BLASTN search.
 
 ```
-# ~/.config/snakemake/slurm/config.yaml
-
-cluster:
-  mkdir -p logs/{rule} &&
-  sbatch
-    --partition={resources.partition}
-    --cpus-per-task={threads}
-    --mem={resources.mem_mb}
-    --time={resources.time}
-    --job-name=smk-{rule}-{wildcards}
-    --output=logs/{rule}/{rule}-{wildcards}-%j.out
-    --error=logs/{rule}/{rule}-{wildcards}-%j.err
-default-resources:
-  - partition=standard
-  - mem_mb=4000
-  - time="02:00:00"
-jobs: 100
-use-conda: true
-restart-times: 3
-max-jobs-per-second: 1
-max-status-checks-per-second: 10
-local-cores: 1
-latency-wait: 60
-keep-going: true
-rerun-incomplete: true
-printshellcmds: true
-scheduler: greedy
+blastn -evalue 0.001 \
+-db Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa \
+-query sample.fa \
+-outfmt 6 > blastres1.tsv
 ```
 
-Exit and save nano with Ctrl+x.
+Check the output with `cat`.
 
-## Part 3 - Get the "malaria" working folder
+Now count the number of CDS sequences with grep.
 
-It contains the fastq sequence files, the reference genome and a few handy scripts.
-
-```
-wget https://ziemann-lab.net/public/bioinfo_workshop/malaria.zip
-unzip malaria.zip 
-cd malaria
-ls
-```
-
-## Part 4 - Build apptainer tools
-
-We will need to build the key dependencies that interact with the data.
-
-I have written a script that does this automatically for us.
+Then divide the fasta file into 10-20 smaller chunks.
+Here is an example which first makes the file 1 sequence per line, then
+creates files with 400 lines each.
 
 ```
-cat build_deps.sh
+paste -s -d '\t' Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.unwrap.fa \
+| sed 's/>/\n>/g' | split -l400 - seqchunk.fa.
 ```
 
-You will see that each tool has a `tag` name which gives us the version number.
-
-You can see that apptainer can be used for individual small tools in this way, 
-which is different to the use last week, where we had a monolithic image that contained
-all of the apps.
-Each approach has some benefits and drawbacks.
-
-Execute the script
+They're still 1 line per record, so it is best to return it to the 2 lines per record
+format for BLAST.
 
 ```
-bash build_deps.sh
-```
+for SEQ in seqchunk.fa* ; do
+  SEQ2=$(echo $SEQ | sed 's/seqchunk.fa/seqchunk2.fa/')
+  sed 's/\t/\n/g' $SEQ | grep -v ^$ > $SEQ2
+done
+``
 
-## Part 5 - Prepare the Snakefile
-
-The `Snakefile` that you see in the downloaded malaria folder details our workflow.
-
-Let's read through and understand it all.
-
-## Part 6 - Index the genome
-
-The workflow doesn't include a bwa index, so let's do that now with our bwa apptainer.
-
-With a normal bwa install it would be run like this:
+Now run a blast search with one of the fasta files.
 
 ```
-bwa index ref/Plasmodium_falciparum.ASM276v2.dna_sm.toplevel.fa.gz
-```
-
-But with the apptainer it is done like this:
-
-```
-apptainer run --writable-tmpfs bwa.sif index ref/Plasmodium_falciparum.ASM276v2.dna_sm.toplevel.fa.gz
-```
-
-To check that the index was generated, check the files present in the ref folder:
+blastn -evalue 0.001 \
+-num_threads 4 \
+-db Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa \
+-query seqchunk2.fa.aa \
+-outfmt 6 > blastres.fa.aa
 
 ```
-ls ref
-```
 
-You should see five new files with different suffices including amb, ann, bwt, pac and sa.
+Inspect the results.
 
-## Part 7 - Run the workflow
+## Part 2 - Use the scheduler to process one input file
 
-If everything has been set up properly so far, you can try to execute the workflow.
-
-Firstly we will do it without SLURM scheduling, allocating 10 CPU threads on a single machine.
+Use nano to save this text in a file and call it my_job1.sbatch
 
 ```
-snakemake --jobs 10
+#!/bin/bash
+#SBATCH --job-name=my_job                 # Name of the job
+#SBATCH --partition=standard              # Name of the partition to use
+#SBATCH --ntasks=1                        # One task per array job
+#SBATCH --cpus-per-task=4                 # Four CPU threads per job
+#SBATCH --mem=16G                         # Memory per job
+#SBATCH --time=0-01:00:00                 # Max allowed time is 1 hr
+#SBATCH --output=$PWD/log/MyJob-%j.out    # Path for standard output
+#SBATCH --error=$PWD/log/MyJob-%j.err     # Path for standard error
+
+# ===============
+# Explanation
+# ===============
+# This script processes one input file for BLAST search
+# ===============
+
+pwd
+
+rm blastres.fa.aa
+
+time blastn -evalue 0.001 \
+-num_threads 4 \
+-db Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa \
+-query seqchunk2.fa.aa \
+-outfmt 6 > blastres.fa.aa
+
+if [ -r blastres.fa.aa ] ; then
+  echo "Job completed successfully!"
+else
+  echo "Error: echo Job failed."
+fi
+
 ```
 
-Now we'll try running it making use of SLURM cluster, allowing distribution of jobs over
-multiple nodes.
+Again, inspect the results.
+Also inspect the logs which will be in the log folder.
 
-Before we do that we need to delete the recent output.
+## Part 3 - Using job arrays
+
+Use nano to make the sbatch script below and save it as `my_array1.sbatch`.
 
 ```
-snakemake --delete-all-output
-snakemake --executor slurm --jobs 10 --latency-wait 60
+#!/bin/bash
+#SBATCH --job-name=my_job               # Name of the job
+#SBATCH --partition=standard            # Name of the partition to use
+#SBATCH --ntasks=1                      # One task per array job
+#SBATCH --cpus-per-task=4               # Four CPU threads per job
+#SBATCH --mem=16G                       # Memory per job
+#SBATCH --time=0-01:00:00               # Max allowed time is 1 hr
+#SBATCH --output=log/MyJob-%j.out       # Path for standard output
+#SBATCH --error=log/MyJob-%j.err        # Path for standard error
+#SBATCH --array=1-11                    # Create 5 array tasks (indices 1-5)
+
+# ===============
+# Explanation
+# ===============
+# This script processes 11 input files for BLAST search
+# ===============
+
+# Get list of input files
+INPUT_FILES=$(find . | grep seqchunk2 )
+mkdir results
+INPUT_FILE=$(echo $INPUT_FILES | cut -d ' ' -f$SLURM_ARRAY_TASK_ID )
+OUTPUT_FILE="results/result_task_${SLURM_ARRAY_TASK_ID}.tsv"
+echo "Job Array Number: ${SLURM_ARRAY_TASK_ID}"
+echo "Processing file: ${INPUT_FILE}"
+
+# Do the work
+time blastn -evalue 0.001 \
+-num_threads 4 \
+-db Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa \
+-query ${INPUT_FILE} \
+-outfmt 6 > ${OUTPUT_FILE}
+
+echo "Finished successfully!"
 ```
 
-## Part 8 - Extending the work
+## Part 4 - Make end-to-end workflow
 
-The pipeline stops after generating the BAM files, but a typical genomics pipeline would
-do some downstream work on it, like variant calling.
-If you want to develop your skills further, I recommend you extend the pipeline further
-by index the bam files with `samtools` and call variants with `bcftools`.
+For our work to be reproducible, it needs to be automated.
+Scripting each step is self-documenting and helps if you need to run it
+again in the future.
+
+Your task is to make a script `main.sh` that does:
+
+* Preparation: The sequence preparation, including 11 chunks.
+
+* Execution: kicks off the sbatch array AND waits for 11 results files to be completed
+
+* Downstream: reads all the results files and counts how many sequences have 2 or more hits.
+
+Finally, check the logs to ensure all jobs completed properly.
