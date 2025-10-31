@@ -240,11 +240,71 @@ Can you write an `if` statement to check the read numbers are the same for both 
 ## Documenting data
 
 Every project should have a README.
-Let's discuss what it should contain.
+A good README for a data science research project should include these key elements:
 
-1. For a large omics project at the initial stage, what sort of information should go in it?
+**Project Title and Description**
 
-2. How should the README change as a project moves from initial analysis towards publication?
+* Clear, descriptive title
+* Brief overview of the research question or problem
+* Context about why this work matters
+
+**Getting Started**
+
+* Prerequisites and dependencies (Python version, required packages)
+* Installation instructions
+* How to set up the environment (conda, venv, Docker, etc.)
+
+**Data**
+
+* Description of datasets used
+* Sources and how to access them
+* Data structure and format
+* Any preprocessing steps required
+* License/usage restrictions if applicable
+
+**Project Structure**
+
+* Directory organization
+* Description of key files and folders
+* Where to find notebooks, scripts, models, results
+
+**Usage/Reproducibility**
+
+* Step-by-step instructions to reproduce results
+* How to run the code (scripts, notebooks, pipelines)
+* Expected outputs
+* Computational requirements (GPU, memory, runtime estimates)
+
+**Methodology**
+
+* High-level overview of approach
+* Key algorithms or models used
+* Links to relevant papers or documentation
+
+**Results**
+
+* Summary of findings
+* Links to detailed results or reports
+
+**Authors and Acknowledgments**
+
+* Contributors
+* Citations for papers, datasets, or code you built upon
+* Funding sources if applicable
+
+**License**
+
+Software license (MIT, Apache, GPL, etc.)
+Separate data license if needed
+
+**Optional but Valuable**
+
+* Badges (build status, DOI, license)
+* Troubleshooting section
+* Contributing guidelines / contact info
+
+The goal is to make your project understandable and reproducible for
+others (and your future self!).
 
 ## Backing up data
 
@@ -427,7 +487,7 @@ It is a good idea to regularly mirror the code to Burnet's GitLab (explained bel
 An SSH key can be generated using the command ([source](https://www.brandonchecketts.com/archives/its-2023-you-should-be-using-an-ed25519-ssh-key-and-other-current-best-practices)):
 
 ```
-ssh-keygen -t ed25519 -f ~/.ssh/ed25519 -C "your-key-comment"
+ssh-keygen -t ed25519
 
 ```
 
