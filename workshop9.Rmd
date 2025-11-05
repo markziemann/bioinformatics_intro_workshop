@@ -1,35 +1,46 @@
 ---
-title: "Bioinformatics data skills workshop - Session 9: SnakeMake and Targets for workflow management"
+title: "Bioinformatics data skills workshop - Session 9: Using SnakeMake workflow manager on HPC"
 author: "Burnet Bioinformatics Group"
 date: "`r Sys.Date()`"
 output:
   html_document:
-    self_contained: yes
-    mode: selfcontained
+    theme: simplex
     toc: true
-    toc_float: true
-    code_folding: show
+    code_folding: hide
     fig_width: 7
     fig_height: 7
-  prettydoc::html_pretty:
-    theme: cayman
-    highlight: github
+    toc_float:
+      collapsed: true
 bibliography: references.bib
 csl: plos-computational-biology.csl
 ---
 
 Source: https://github.com/markziemann/bioinformatics_intro_workshop
 
+![Snakemake🤝SLURM.](https://www.zxzyl.com/wp/f4w/2022/2022-10-02-snakemakeslurmlog.png)
+
 ## Background
 
-Previously we containerised an R based workflow.
-It would be desirable to have workflows like this that can take advantage of the 
-many available nodes on high performance computers.
-Typically, huge workloads in genomics and bioinformatics use compiled command line tools
-written in C/rust/java.
-For example, in malaria population genomics, it might be useful to use fastq trimming tools
-to remove low quality bases before mapping the reads to the reference genome, followed by
-variant calling.
+In previous sessions, we containerised an R based workflow, and used Slurm to make use of
+the many compute nodes on a HPC system.
+
+For huge and long-running workflows, a workflow manager might be preferred, and they have a
+few key advantages:
+
+* They support containers.
+* They support heterogenous computing; including a mix of HPC, cloud and others.
+* They provide detailed reporting of job errors.
+* Re-running the workflow only repeats the necessary steps. Ie: successfully completed steps
+before the error are not re-run.
+* If changes are made to the code or input data, only the affected steps are re-run.
+
+This makes workflow managers extremely useful for large omics projects, for example when
+processing NGS data from hundreds or thousands of samples.
+
+The example dataset today involves processing NGS data of malaria genome sequences for the
+purpose of understanding the population genetic structure.
+The steps involved are fastq trimming, mapping reads to the reference genome and variant
+calling.
 
 ## Overview of today's activity
 
@@ -49,7 +60,14 @@ variant calling.
 
 ## Part 1 - Setting up Snakemake
 
-On the cluster, snakemake isn't installed, but we can use conda to do that.
+On the cluster, use `sinteractive` to make a 2 hour interactive session with 4 CPU threads and 16 GB
+RAM.
+
+```
+sinteractive -c 4 -p long --mem 16G --time 02:00:00
+```
+
+Snakemake isn't installed, but we can use conda to do that.
 
 Let's see if conda is installed
 
@@ -57,7 +75,7 @@ Let's see if conda is installed
 module avail
 ```
 
-or 
+or
 
 ```
 module spider
@@ -70,6 +88,14 @@ module load miniconda
 ```
 
 This will bring us our "base" environment.
+
+Next, use conda deactivate to get back out of the base environment.
+In other words, if you have `(base)` in your command prompt, you won't get the right
+python version in your environment.
+
+```
+conda deactivate
+```
 
 We should create a named environment for a recennt Python release, where this workflow will be executed.
 
@@ -89,15 +115,22 @@ Now activate the new environment.
 conda activate py312
 ```
 
-Now snakemake can be installed here. 
-The slurm plugin will allow snakemake to use the slurm scheduler which will divide the workload over the nodes of the cluster.
+Check the python verson.
+
+```
+python --version
+```
+
+Now snakemake can be installed here.
+The slurm plugin will allow snakemake to use the slurm scheduler which will divide the
+workload over the nodes of the cluster.
 
 ```
 pip install snakemake
 pip install snakemake-executor-plugin-slurm
 ```
 
-Now try `snakemake -h` to how the help screen.
+Now try `snakemake -h` to show the help screen.
 
 ## Part 2 - Setting up cluster information
 
@@ -111,7 +144,7 @@ Now we need to create a text file.
 Here, I do it with nano.
 
 ```
-nano ~/.config/snakemake/slurm/config.yaml 
+nano ~/.config/snakemake/slurm/config.yaml
 ```
 
 Here is the configuration that I have been using:
@@ -130,6 +163,7 @@ cluster:
     --output=logs/{rule}/{rule}-{wildcards}-%j.out
     --error=logs/{rule}/{rule}-{wildcards}-%j.err
 default-resources:
+  - slurm_account=mark.ziemann
   - partition=standard
   - mem_mb=4000
   - time="02:00:00"
@@ -154,7 +188,7 @@ It contains the fastq sequence files, the reference genome and a few handy scrip
 
 ```
 wget https://ziemann-lab.net/public/bioinfo_workshop/malaria.zip
-unzip malaria.zip 
+unzip malaria.zip
 cd malaria
 ls
 ```
@@ -171,7 +205,7 @@ cat build_deps.sh
 
 You will see that each tool has a `tag` name which gives us the version number.
 
-You can see that apptainer can be used for individual small tools in this way, 
+You can see that apptainer can be used for individual small tools in this way,
 which is different to the use last week, where we had a monolithic image that contained
 all of the apps.
 Each approach has some benefits and drawbacks.
@@ -216,21 +250,39 @@ You should see five new files with different suffices including amb, ann, bwt, p
 
 If everything has been set up properly so far, you can try to execute the workflow.
 
-Firstly we will do it without SLURM scheduling, allocating 10 CPU threads on a single machine.
+Firstly we will do it without SLURM scheduling, allocating 4 CPU threads on a single machine.
 
 ```
-snakemake --jobs 10
+snakemake --jobs 4
 ```
 
 Now we'll try running it making use of SLURM cluster, allowing distribution of jobs over
 multiple nodes.
 
-Before we do that we need to delete the recent output.
+In order to submit jobs to the cluster, we need to be working from the login node.
+
+We also need to delete the recent output.
 
 ```
 snakemake --delete-all-output
-snakemake --executor slurm --jobs 10 --latency-wait 60
 ```
+
+Ensure you have the right conda environment loaded:
+
+```
+conda activate py312
+```
+
+Then execute it:
+
+```
+snakemake --executor slurm --jobs 10 --default-resources runtime=2h --latency-wait 60
+```
+
+It is also good practice to view the logs.
+These are in a hidden folder called '.snakefile/log'.
+Use `ls -la` to list all folder contents including hidden files and folders, then
+`cd .snakefile/log` to navigate there and use less to inspect the log contents.
 
 ## Part 8 - Extending the work
 
