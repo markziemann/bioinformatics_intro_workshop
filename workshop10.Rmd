@@ -1,0 +1,111 @@
+---
+title: "Bioinformatics data skills workshop - Session 10: Machine learning in R with caret"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: simplex
+    toc: true
+    code_folding: hide
+    fig_width: 7
+    fig_height: 7
+    toc_float:
+      collapsed: true
+bibliography: references.bib
+csl: plos-computational-biology.csl
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+![Caret.](https://www.opensourceforu.com/wp-content/uploads/2023/12/Caret-Package_R-696x477.jpg)
+
+## Background
+
+Caret is short for *Classification And REgression Training* and is designed to wrangle
+functions from different ML packages into one.
+
+It has functions for data preparation, visualisations, pre-processing, filtering,
+classification performance metrics, hyperparameter tuning, class imbalance correction,
+fine tuning classifier thresholds, training and resampling multiple models.
+
+According to the [Caret documentation](https://topepo.github.io/caret/available-models.html) it supports over 200 different model types including a few well known ones:
+
+| Model Type | Method | Description |
+| --- | --- | --- |
+| Linear Models | "lm", "glm", "glmnet" | Linear regression, generalized linear models, elastic net |
+| Tree-based Models | "rpart", "rf", "xgbTree", "gbm" | Decision trees, random forests, gradient boosting |
+| Support Vector Machines | "svmLinear", "svmRadial" | Linear and RBF kernel SVMs |
+| K-Nearest Neighbors | "knn" | Simple distance-based classifier |
+| Neural Networks | "nnet", "mlp" | Shallow neural networks |
+| Naive Bayes | "naive_bayes", "nb" | Probabilistic classifiers |
+| Ensemble Methods | "stacking", "bagFDA", "ada" | Stacking, bagging, boosting |
+
+
+## Set up packages
+
+There are a lot of packages to install so best to run this before the session.
+
+```
+install.packages("caret", dependencies = c("Depends", "Suggests"))
+```
+
+## Basic implementation
+
+```
+library(caret)
+set.seed(123)
+
+# Split data
+trainIndex <- createDataPartition(iris$Species, p = .8, list = FALSE)
+trainData <- iris[trainIndex, ]
+testData  <- iris[-trainIndex, ]
+
+# Preprocessing and model training
+ctrl <- trainControl(method = "cv", number = 10)
+model <- train(Species ~ ., data = trainData,
+               method = "xgbTree",
+               trControl = ctrl,
+               preProcess = c("center", "scale"))
+
+# Evaluate
+pred <- predict(model, testData)
+confusionMatrix(pred, testData$Species)
+```
+
+## Another example
+
+https://cran.r-project.org/web/packages/caret/vignettes/caret.html
+
+```
+library(caret)
+library(mlbench)
+data(Sonar)
+
+set.seed(107)
+inTrain <- createDataPartition(
+  y = Sonar$Class,
+  ## the outcome data are needed
+  p = .75,
+  ## The percentage of data in the
+  ## training set
+  list = FALSE
+)
+
+training <- Sonar[ inTrain,]
+testing  <- Sonar[-inTrain,]
+
+nrow(training)
+nrow(testing)
+
+plsFit <- train(
+  Class ~ .,
+  data = training,
+  method = "pls",
+  ## Center and scale the predictors for the training
+  ## set and all future samples.
+  preProc = c("center", "scale")
+)
+
+
+## Omics data implementation
+
