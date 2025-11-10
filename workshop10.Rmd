@@ -113,7 +113,7 @@ library("caret")
 
 ## Basic implementation
 
-Here we will use the XGBoost method with cross validation to analyse the iris data.
+Here we will use the "glm" method with cross validation to analyse the iris data.
 The model will predict the species based on petal/sepal length/width.
 
 ```
@@ -139,43 +139,44 @@ ctrl <- trainControl(
   savePredictions = TRUE
 )
 
-# 4. Train a logistic regression model
+# 4. Train a generalised linear model
 fit <- train(
   Species ~ .,
   data = trainData,
-  method = "xgbTree",
+  method = "glm",
   metric = "ROC",
   trControl = ctrl,
   preProcess = c("center", "scale")
 )
 fit
 
-# 5. Predict class probabilities
+# 5. Predict class probabilities and make predictions
 probs <- predict(fit, testData, type = "prob")[,2]
-
 pred <- predict(fit, testData)
 confusionMatrix(pred, testData$Species)
 
 # 6. Compute ROC curve
-roc_obj <- roc(testData$Species, probs)
-plot(roc_obj, main = "ROC Curve - XGBoost (caret)")
-auc(roc_obj)
+roc_glm <- roc(testData$Species, probs)
+plot(roc_glm, main = "ROC Curve - GLM (caret)")
+auc(roc_glm)
 
 # Plot the result
-pdf("roc.pdf")
-plot(roc_obj, main = "ROC Curve - XGBoost (caret)")
-auc(roc_obj)
+pdf("roc_glm.pdf")
+plot(roc_glm, main = "ROC Curve - GLM (caret)")
+auc(roc_glm)
 dev.off()
 
 ```
-
 
 ## Another example
 
 Follow the example in the [Caret Vignette](https://cran.r-project.org/web/packages/caret/vignettes/caret.html),
 which I've summarised below.
 
+It involves the PLS (partial least squares) model.
+
 ```
+
 library(caret)
 library(mlbench)
 data(Sonar)
@@ -220,13 +221,13 @@ head(plsProbs)
 
 confusionMatrix(data = plsClasses, testing$Class)
 
-roc_obj <- roc(plsClasses, plsProbs$R)
-plot(roc_obj, main = "ROC Curve - PLS (caret)")
-auc(roc_obj)
+roc_pls <- roc(testing$Class, plsProbs$R)
+plot(roc_pls, main = "ROC Curve - PLS (caret)")
+auc(roc_pls)
 
-pdf("roc2.pdf")
-plot(roc_obj, main = "ROC Curve - PLS (caret)")
-auc(roc_obj)
+pdf("roc_pls.pdf")
+plot(roc_pls, main = "ROC Curve - PLS (caret)")
+auc(roc_pls)
 dev.off()
 
 ```
@@ -253,13 +254,16 @@ rdaFit
 rdaClasses <- predict(rdaFit, newdata = testing)
 confusionMatrix(rdaClasses, testing$Class)
 
-roc_obj <- roc(plsClasses, plsProbs$R)
-plot(roc_obj, main = "ROC Curve - RDA (caret)")
-auc(roc_obj)
+rdaProbs <- predict(rdaFit, newdata = testing, type = "prob")
+head(rdaProbs)
 
-pdf("roc3.pdf")
-plot(roc_obj, main = "ROC Curve - RDA (caret)")
-auc(roc_obj)
+roc_rda <- roc(testing$Class, rdaProbs$R)
+plot(roc_rda, main = "ROC Curve - RDA (caret)")
+auc(roc_rda)
+
+pdf("roc_rda.pdf")
+plot(roc_rda, main = "ROC Curve - RDA (caret)")
+auc(roc_rda)
 dev.off()
 
 ```
@@ -290,9 +294,37 @@ rfFit
 rfClasses <- predict(rfFit, newdata = testing)
 confusionMatrix(rfClasses, testing$Class)
 
+rfProbs <- predict(rfFit, newdata = testing, type = "prob")
+head(rfProbs)
+
+roc_rf <- roc(testing$Class, rfProbs$R)
+plot(roc_rf, main = "ROC Curve - RF (caret)")
+auc(roc_rf)
+
 ```
 
-Generate the ROC curve yourself.
+Now make a single chart with different series overlaid, including the models you ran already
+on the sonar data (PLS, RDA and RF) as well as a a new one (try XGBoost or GLM).
+
+```
+
+plot(roc_pls,col="black",main="Comparison of models on Sonar data")
+lines(roc_rda,col="blue")
+lines(roc_rf,col="red")
+lines(roc_glm,col="orange") # need to make/run this model
+
+# then run a GLM on sonar data and 
+
+leglab=c(paste("PLS",signif(auc(roc_pls),3)),
+  paste("RDA",signif(auc(roc_rda),3)),
+  paste("RF",signif(auc(roc_rf),3)),
+  paste("GLM","XX") )
+
+legend(0.3, 0.3, legend=leglab,
+       col=c("black", "blue","red","orange"), cex=1, lty=1, lwd=2,
+       title="Line types")
+
+```
 
 ## Omics data implementation
 
