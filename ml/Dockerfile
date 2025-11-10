@@ -3,7 +3,7 @@ FROM bioconductor/bioconductor_docker:3.21-R-4.5.2
 # Update apt-get
 RUN apt-get update \
         && apt-get upgrade -y \
-        && apt-get install -y nano git  libncurses-dev \
+        && apt-get install -y nano git libncurses-dev x11-apps \
         ## Remove packages in '/var/cache/' and 'var/lib' to remove side-effects of apt-get update
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
