@@ -42,7 +42,7 @@ According to the [Caret documentation](https://topepo.github.io/caret/available-
 
 A typical machine learning workflos looks a bit like this:
 
-[Typical ML workflow](https://miro.medium.com/v2/resize:fit:1100/format:webp/1*ioZ200iYyX-QJfOLs17gow.jpeg)
+![Typical ML workflow](https://miro.medium.com/v2/resize:fit:1100/format:webp/1*ioZ200iYyX-QJfOLs17gow.jpeg)
 
 After data cleaning, the data is split into training (~30%) and testing (~70%).
 In the world of omics, this division is based on samples, but different approaches
@@ -79,9 +79,9 @@ This gives a visual representation of FPR on the x-axis and TPR on the y-axis.
 It shows model classification performance across all possible thresholds.
 We summarise the performance by calculating the area under the ROC curve (AUROC).
 
-[A ROC schematic.](https://i.sstatic.net/JlVuis2C.jpg)
+![A ROC schematic](images/JlVuis2C.jpg)
 
-[A real ROC Curve.](https://www.researchgate.net/profile/Beyazit-Yuksel-2/publication/348973412/figure/fig1/AS:1166874209460224@1655215899047/Area-under-the-ROC-Curve-AUROC_W640.jpg)
+![A real ROC Curve](images/Area-under-the-ROC-Curve-AUROC_W640.jpg)
 
 Explore an example ROC curve [here](https://developers.google.com/machine-learning/crash-course/classification/roc-and-auc#area_under_the_curve_auc).
 
@@ -89,11 +89,21 @@ Explore an example ROC curve [here](https://developers.google.com/machine-learni
 
 As caret has a lot of dependencies, it is best to use a pre-made container image.
 
+I have set up an apptainer image which is available from my lab's website:
+
+```
+wget https://ziemann-lab.net/public/bioinfo_workshop/r-caret.sif
+```
+
+If for some reason this image isn't available, you can build it from the docker image:
+
 ```
 apptainer pull r-caret.sif docker://mziemann/r-caret:latest
 ```
 
-Then we can start a shell using the image (for HPC).
+If make your own Docker image with the provided [Dockerfile](https://github.com/markziemann/bioinformatics_intro_workshop/blob/main/ml/Dockerfile).
+
+Once that is sorted, we can start a shell using the image (for HPC).
 
 ```
 apptainer run --writable-tmpfs r-caret.sif /bin/bash
@@ -107,6 +117,7 @@ apptainer run --writable-tmpfs r-caret.sif
 ```
 
 Then in R try to load the caret library.
+
 ```
 library("caret")
 ```
@@ -327,4 +338,117 @@ legend(0.3, 0.3, legend=leglab,
 ```
 
 ## Omics data implementation
+
+Let's try to use this workflow to classify cancer and normal lung tissues based on RNA-seq
+data.
+
+```
+
+library("caret")
+library("mlbench")
+library("DESeq2")
+library("pROC")
+
+download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE158420&format=file&file=GSE158420%5Fcounts%2Etxt%2Egz",
+  destfile="GSE158420.counts.txt.gz")
+
+x <- read.csv("GSE158420.counts.txt.gz",header=TRUE,sep="\t")
+
+xa <- aggregate(. ~ X,x,sum)
+
+rownames(xa) <- xa$X
+
+xa$X=NULL
+
+# remove genes with <10 reads on average
+table(rowMeans(xa)>=10)
+
+xaf <- xa[(rowMeans(xa)>=10),]
+rpm <-  apply(X=xaf,MARGIN=2,FUN=function(x) { x/sum(x) * 1e6} )
+
+# run DE to get informative genes
+ss <- data.frame(colnames(xaf))
+ss$tumor <- factor(grepl("T",ss[,1]))
+ss$patient <- factor(gsub("N","",gsub("T","",ss[,1])))
+dds <- DESeqDataSetFromMatrix(countData = xaf , colData=ss, design = ~ patient + tumor)
+res <- DESeq(dds)
+z <- results(res)
+vsd <- vst(dds, blind=FALSE)
+zz <- cbind(as.data.frame(z),assay(vsd))
+dge <- as.data.frame(zz[order(zz$pvalue),])
+
+topgenes <- head(rownames(dge),100)
+
+topmx <- rpm[which(rownames(rpm) %in% topgenes),]
+
+dim(topmx)
+
+topmx2 <- as.data.frame(t(topmx))
+
+# labels cant be TRUE/FALSE, factor is better
+topmx2$tumor <- factor(gsub("FALSE","control",gsub("TRUE","tumor",as.character(grepl("T",rownames(topmx2))))))
+
+set.seed(107)
+
+inTrain <- createDataPartition(
+  y = topmx2$tumor,
+  p = 0.75,
+  list = FALSE
+)
+
+training <- topmx2[ inTrain,]
+testing  <- topmx2[-inTrain,]
+
+dim(training)
+dim(testing)
+
+ctrl <- trainControl(
+  method = "repeatedcv",
+  repeats = 3,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary
+)
+
+plsFit <- caret::train(
+  tumor ~ .,
+  data = training,
+  method = "pls",
+  preProc = c("center", "scale"),
+  tuneLength = 15,
+  trControl = ctrl,
+  metric = "ROC"
+)
+plsFit
+
+
+plsClasses <- predict(plsFit, newdata = testing)
+str(plsClasses)
+
+plsProbs <- predict(plsFit, newdata = testing, type = "prob")
+head(plsProbs)
+
+confusionMatrix(data = plsClasses, testing$tumor)
+
+roc_pls <- roc(testing$tumor, plsProbs$tumor)
+plot(roc_pls, main = "ROC Curve - Cancer PLS (caret)")
+auc(roc_pls)
+
+pdf("roc_pls_cancer.pdf")
+plot(roc_pls, main = "ROC Curve - PLS (caret)")
+auc(roc_pls)
+dev.off()
+
+```
+
+There are multiple ways to extend upon this work.
+
+* Explore different model types.
+
+* Try using a smaller training set, which will give a bigger testing set, which will be more accurate.
+
+* See if a smaller number of genes can be just as accurate as the 100 used here.
+
+* See if the model is still accurate with other lung cancer RNA-seq datasets.
+
+
 
