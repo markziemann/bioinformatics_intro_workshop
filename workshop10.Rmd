@@ -44,7 +44,7 @@ A typical machine learning workflos looks a bit like this:
 
 ![Typical ML workflow](https://miro.medium.com/v2/resize:fit:1100/format:webp/1*ioZ200iYyX-QJfOLs17gow.jpeg)
 
-After data cleaning, the data is split into training (~30%) and testing (~70%).
+After data cleaning, the data is split into training (~70%) and testing (~30%).
 In the world of omics, this division is based on samples, but different approaches
 can be applied.
 For example we may want to classify genes or proteins based on some features.
