@@ -1,0 +1,207 @@
+---
+title: "Bioinformatics data skills workshop - Session 11: Automated natural language processing with Ollama, OpenAI and Anthropic LLMs"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: simplex
+    toc: true
+    code_folding: hide
+    fig_width: 7
+    fig_height: 7
+    toc_float:
+      collapsed: true
+bibliography: references.bib
+csl: plos-computational-biology.csl
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+## Background
+
+Large language models have emerged as useful not only in conducting natural language
+analysis, but in real direct-to-consumer applications such as chatbot assistants.
+Here, we will provide you with a basic introduction to using local models with the Ollama
+command line tool, and how to access these open and other proprietary LLMs from within R.
+
+Let's take a look at the [Ollama website](https://ollama.com).
+
+## Part 1 - Trying out Ollama for the first time
+
+Log into the HPC and make a sinteractive session that includes a GPU.
+We have a NVIDIA RTX A6000 with 48GB RAM.
+
+```
+sinteractive -c 8 -p standard --mem 64G --time 01:00:00 --nodelist=bnt-hpcn-04 --gpus=1
+```
+
+See whether the Ollama tool is working for you:
+
+```
+ollama
+ollama -v
+```
+
+Note the version of Ollama you're using.
+It should be >0.11.7
+
+If Ollama reports "Warning: could not connect to a running Ollama instance",
+then start the server:
+
+```
+ollama serve &
+```
+
+Check to see if you have any LLMs downloaded:
+
+```
+ollama list
+```
+
+If you have none, then fetch a 2GB llama model:
+
+```
+ollama pull llama3.2:3b
+```
+
+Ollama allows for interactive and non-interactive processing.
+
+```
+ollama run llama3.2:3b
+```
+
+And you can ask it to do a simple task.
+For example "Write a sea shanty about the joy and despair of bioinformatics research".
+
+Then to exit the text prompt, type `/bye`
+
+## Part 2 - Non interactive text analysis
+
+We can also provide Ollama with some text and analyse it.
+In this example, we will analyse the methods from PMC2785382.
+First we will fetch the journal article using `lynx`.
+
+```
+PMC=PMC2785382
+lynx --dump "https://pmc.ncbi.nlm.nih.gov/articles/${PMC}/" > $PMC.txt
+```
+
+Take a look at the formatting of the article with `less` or `nano`.
+
+Next we will define the MODEL we want to run.
+
+```
+MODEL=llama3.2:3b
+```
+
+Now we can define the prompt.
+When checklisting, the questions must be precise.
+
+```
+PROMPT=$(cat <<EOF
+Please carefully examine the scientific article for details about how the laboratory techniques were conducted. Focus on the Methods section, but you may also refer to Results, Figures, or Supplementary Materials if necessary.
+Your task is to extract only what is explicitly reported, not what might be implied. Do not guess or infer missing details. If a detail is not present, write "Not described".
+Please answer the following 6 questions. The only allowed answers are "Yes", "No" and "Not described".
+1. Does the article report doing a Western blot?
+2. Does the article report how the protein extraction was done?
+3. Does the article report whether the antibody used in Western blot is monoclonal or polyclonal?
+4. Does the article report the batch number of the antibody?
+5. Does the article present RT-qPCR results?
+6. Does the article describe the procedure used for RNA extraction?
+7. Does the article report the primer sequences for the target genes?
+Be terse and provide output in table format.
+EOF
+)
+```
+
+Now we can run the workflow for this article.
+
+```
+cat ${PMC}.txt | ollama run $MODEL --verbose $PROMPT > ${PMC}_${MODEL}.txt
+```
+
+You'll see that ollama can't process the whole request due to the size of the
+article.
+We can cut it down by selecting the text from the Abstract to the Conclusion.
+To do this, we will identify the lines where "Abstract" and "Acknowledgement" are,
+discarding the rest.
+
+```
+ABS_LINE=$(grep -iwn Abstract $PMC.txt | cut -d ':' -f1 | head -1)
+echo ABSTRACT LINE: $ABS_LINE
+ACK_LINE=$(egrep -in '(Acknowledgment|Acknowledgement|References)' $PMC.txt | cut -d ':' -f1 | head -1)
+echo ACKNOWLEDGEMENT LINE: $ACK_LINE
+head -$ACK_LINE $PMC.txt | tail -n +$ABS_LINE > tmp ; mv tmp $PMC.txt
+```
+
+Run Ollama again for this cut-down article.
+
+```
+cat ${PMC}.txt | ollama run $MODEL --verbose $PROMPT > ${PMC}_${MODEL}.txt
+```
+
+Now take a look at the results:
+
+```
+cat PMC2785382_llama3.2\:3b.txt
+```
+
+## Homework exercise
+
+1. Modify your script to cycle between 3-5 PMC IDs, generating separate output for each article.
+
+2. Modify the script to run three different models on your set of PMC articles.
+
+3. Check the results to see if there are any discrepancies, which of the models is more accurate for
+extracting methodological information.
+
+## Part 3 - Using Ollama local LLMs from R
+
+Setup:
+
+* Ollama version 0.11.7.
+
+* R version 4.4
+
+* ollamar v1.2.2
+
+```
+library("ollamar")
+
+# Check if Ollama is running
+tryCatch({
+  test_connection()
+  cat("✓ Ollama is running!\n")
+}, error = function(e) {
+  stop("✗ Ollama is not running. Please start it with: ollama serve")
+})
+
+# List available models
+available_models <- list_models()
+print(available_models)
+```
+
+Basic usage.
+
+```
+# Simple generation
+response <- generate(
+  model = "llama3.2",
+  prompt = "Explain lateral flow diagnostic tests in one sentence.",
+  output = "text"  # Returns plain text
+)
+
+cat("Response:\n", response, "\n")
+
+# With more control
+response_detailed <- generate(
+  model = "llama3.2",
+  prompt = "Explain lateral flow diagnostic tests in one sentence.",
+  temperature = 0.7,
+  output = "df"  # Returns a dataframe with metadata
+)
+
+print(response_detailed$response)
+```
+
+## Part 4 - Using proprietary LLMs from R
