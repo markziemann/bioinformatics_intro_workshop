@@ -146,7 +146,7 @@ Now take a look at the results:
 cat PMC2785382_llama3.2\:3b.txt
 ```
 
-## Homework exercise
+## Homework exercise 1
 
 1. Modify your script to cycle between 3-5 PMC IDs, generating separate output for each article.
 
@@ -317,3 +317,17 @@ Parse the output.
 chunk <- strsplit(gsub(" ","",response[1]),"\n")
 parsed <- as.numeric(grepl("\\|Yes",unlist(chunk)))[3:9]
 ```
+
+## Homework exercise 2
+
+1. Make you own checklist related to your own work.
+
+2. Modify the script to run three different models on your set of PMC articles using Ollama
+and either OpenAI or Anthropic (LLMR works for both).
+
+3. Check the results to see if there are any discrepancies, which of the models is more accur>
+extracting methodological information.
+
+## Further reading
+
+Learn about [retrieval-augmented_generation (wikipedia)](https://en.wikipedia.org/wiki/Retrieval-augmented_generation).
