@@ -106,7 +106,7 @@ Please answer the following 6 questions. The only allowed answers are "Yes", "No
 2. Does the article report how the protein extraction was done?
 3. Does the article report whether the antibody used in Western blot is monoclonal or polyclonal?
 4. Does the article report the batch number of the antibody?
-5. Does the article present RT-qPCR results?
+5. Does the article present real-time quantitative PCR results?
 6. Does the article describe the procedure used for RNA extraction?
 7. Does the article report the primer sequences for the target genes?
 Be terse and provide output in table format.
@@ -166,6 +166,11 @@ Setup:
 * ollamar v1.2.2
 
 ```
+module load R/4.4
+```
+
+```
+
 library("ollamar")
 
 # Check if Ollama is running
@@ -202,6 +207,113 @@ response_detailed <- generate(
 )
 
 print(response_detailed$response)
+
 ```
 
+Run a checklist on a text.
+
+To set this up, create a checklist.txt file with nano.
+Use the text above `Please carefully ... table format`
+
+```
+nano checklist.txt
+```
+
+This checklist will be read into R.
+
+```
+checklist <- readLines("checklist.txt")
+checklist <- paste(checklist,collapse="\n ")
+checklist
+
+```
+
+
+Now get the article text.
+
+```
+
+article <- readLines("PMC2785382.txt")
+article <- paste(article,collapse="\n ")
+article
+
+```
+
+
+Compose the prompt using the article text and the checklist:
+
+```
+prompt <- paste("Here is a text:\n", article,"\nQuestion: ", checklist, "\nAnswer:")
+```
+
+Now run the checklist:
+
+```
+checklist_response <- generate(
+  model = "llama3.2",
+  prompt = prompt,
+  temperature = 0.7,
+  output = "df"  # Returns a dataframe with metadata
+)
+
+print(checklist_response$response)
+```
+
+
 ## Part 4 - Using proprietary LLMs from R
+
+We'll use the LLMR package (v0.6.3).
+
+This part will be using a proprietary (OpenAI) model, so an API key is required.
+Save this in a file called `openai.key` in the working directory.
+
+```
+library(LLMR)
+
+OPENAI_API_KEY <- readLines("openai.key")[1]
+
+```
+
+Now formulate the prompt.
+
+```
+checklist <- readLines("checklist.txt")
+checklist <- paste(checklist,collapse="\n ")
+
+article <- readLines("PMC2785382.txt")
+article <- paste(article,collapse="\n ")
+
+prompt <- paste("Here is a text:\n", article,"\nQuestion: ", checklist, "\nAnswer:")
+
+```
+
+Next, set up the configuration of the request including the type of model
+and the temperature.
+
+```
+openai_cfg <- llm_config(
+  provider = "openai",
+  model = "gpt-4.1-mini",
+  api_key = OPENAI_API_KEY,
+  temperature = .5,
+  max_tokens = 2500
+)
+```
+
+Now make the actual call.
+
+```
+response <- call_llm_robust(config = openai_cfg , prompt,
+  verbose = TRUE, tries = 5,
+  wait_seconds = 30, backoff_factor = 5)
+
+$choices[[1]]$message$content
+
+```
+
+Parse the output.
+
+```
+chunk <- strsplit(gsub(" ","",response[1]),"\n")
+parsed <- as.numeric(grepl("\\|Yes",unlist(chunk)))[3:9]
+```
