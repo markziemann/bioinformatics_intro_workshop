@@ -141,3 +141,8 @@ You can make a copy for youself.
 Just be aware that the raw data is huge (56GB).
 Here is the link.
 /home/mark.ziemann/projects/proteomics/raw_data
+
+
+```
+cp -r /home/mark.ziemann/projects/proteomics/raw_data .
+```
