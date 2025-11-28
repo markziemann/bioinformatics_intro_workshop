@@ -134,6 +134,12 @@ to make an apptainer image that we can use on shared systems like the Burnet HPC
 
 ## Other things FragPipe needs to run
 
+* Raw data
+
+* Manifest file
+
+* Workflow file
+
 Raw data for this workshop is available from PRIDE database under accession number PXD058340.
 We also have a local copy which you can use.
 
@@ -146,3 +152,5 @@ Here is the link.
 ```
 cp -r /home/mark.ziemann/projects/proteomics/raw_data .
 ```
+
+Then we need a manifest file
