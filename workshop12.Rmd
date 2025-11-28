@@ -1,0 +1,143 @@
+---
+title: "Bioinformatics data skills workshop - Session 12: Streamlined proteomics analysis using FragPipe"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: simplex
+    toc: true
+    code_folding: hide
+    fig_width: 7
+    fig_height: 7
+    toc_float:
+      collapsed: true
+bibliography: references.bib
+csl: plos-computational-biology.csl
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+## Background
+
+Proteomics involves the investigation of protein mixtures, normally derived from cell extracts
+and tissues.
+The most common approach to this is via mass spectrometry, which can simultaneously measure
+distinct peptide ions.
+While it is possible to sample materials in solid state using MALDI-TOF, for most biospecimens,
+the preferred approach is to apply MS to solutions separated using high performance liquid
+chromatography (HPLC).
+The measurements obtained include the retention time from the column, the mass spectrum expressed
+in mass divided by charge (m/z) and the intensity.
+Tandem mass spec allows for the peptides to strike the detector and be fragmented into smaller
+components and undergo a second round of mass spec, allowing for each parent ion to be
+profiled in more detail, as each peptide has a unique fragmentation pattern.
+This fragmentation pattern is the m/z of the various fragments and their intensities,
+which is unique to each peptide.
+
+Due to this complexity, and the huge size of the datasets, proteomics analysis is particularly
+challenging.
+We won't be able to do a deep dive into all aspects of proteomics in this series, however
+we can introduce you to FragPipe, a pipeline which is designed to take care of most of the
+use cases of proteomics.
+In this workshop, we will be using fragpipe to process raw proteomics data, generate the intensity
+data and load this dataset into R.
+
+We decided early on that we wanted to containerise our workflow to make it portable so that we
+could use it on our HPC.
+
+## How the Docker image was made
+
+Fragpipe is meant to be an end-to-end pipeline, but it has multiple problems.
+Firstly, it has some critical dependencies, which are covered by a restrictive licence,
+meaning we are unable to find a publicly available working image, also we are unable to
+publish a public one either.
+That said, I can show you the steps we used to make our image and I can make it available to
+you internally if you work or study at Burnet or Deakin.
+
+You can see that this image requires a great number of dependencies which took my group several
+weeks of work to iron out.
+
+```
+FROM ubuntu:24.04
+USER root
+ARG DEBIAN_FRONTEND=noninteractive
+
+# update and upgrade packages
+RUN apt-get -y update --fix-missing \
+    && apt-get -y upgrade \
+    && apt-get -y update \
+    && apt-get -y autoremove
+
+# install mono
+RUN apt-get -y install ca-certificates gnupg
+RUN gpg --homedir /tmp --no-default-keyring --keyring /usr/share/keyrings/mono-official-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+RUN echo "deb [signed-by=/usr/share/keyrings/mono-official-archive-keyring.gpg] https://download.mono-project.com/repo/ubuntu stable-focal main" | tee /etc/apt/sources.list.d/mono-official-stable.list
+RUN apt-get -y update
+RUN apt-get -y install mono-devel
+
+RUN apt install -y software-properties-common
+RUN add-apt-repository ppa:deadsnakes/ppa
+RUN add-apt-repository ppa:dotnet/backports
+RUN apt-get -y update
+
+# install dependencies
+RUN apt-get -y install \
+    git \
+    python3.11 \
+    python3-pip \
+    tar \
+    unzip \
+    wget \
+    openjdk-17-jdk \
+    vim \
+    dotnet-runtime-6.0
+
+# install python packages
+RUN pip uninstall --break-system-packages easypqp \
+    && pip install --break-system-packages git+https://github.com/Nesvilab/easypqp.git@master \
+    && pip install --break-system-packages lxml \
+    && pip install --break-system-packages plotly \
+    && pip install --break-system-packages kaleido \
+    && pip install --break-system-packages narwhals \
+    && pip install --break-system-packages pyarrow \
+    && pip install --break-system-packages pypdf2
+
+# create a directory with 777 permission and set it to the work directory
+RUN mkdir /fragpipe_bin
+RUN chmod 777 /fragpipe_bin
+WORKDIR /fragpipe_bin
+
+# create directories
+RUN mkdir tmp
+RUN chmod 777 tmp
+
+# download and install fragPipe
+RUN wget https://github.com/Nesvilab/FragPipe/releases/download/23.1/FragPipe-23.1-linux.zip -P fragpipe-23.1
+RUN unzip fragpipe-23.1/FragPipe-23.1-linux.zip -d fragpipe-23.1
+RUN chmod -R 777 /fragpipe_bin
+
+# add dependencies
+RUN mkdir -p /fragpipe_bin/dependencies/
+COPY MSFragger-4.3 /fragpipe_bin/dependencies/MSFragger-4.3
+COPY IonQuant-1.11.11 /fragpipe_bin/dependencies/IonQuant-1.11.11
+COPY diaTracer-1.3.3 /fragpipe_bin/dependencies/diaTracer-1.3.3
+
+# set environment variables
+ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64/
+RUN export JAVA_HOME
+```
+
+This image is called `mziemann/fragpipe_mod2` and I used the command
+`docker image save > fragpipe_mod2.tar` to save the image to a tar archive.
+I then used the command `apptainer build fragpipe.sif docker-archive:fragpipe.tar`
+to make an apptainer image that we can use on shared systems like the Burnet HPC.
+
+## Other things FragPipe needs to run
+
+Raw data for this workshop is available from PRIDE database under accession number PXD058340.
+We also have a local copy which you can use.
+
+You can make a copy for youself.
+Just be aware that the raw data is huge (56GB).
+Here is the link.
+/home/mark.ziemann/projects/proteomics/raw_data
