@@ -33,6 +33,11 @@ components and undergo a second round of mass spec, allowing for each parent ion
 profiled in more detail, as each peptide has a unique fragmentation pattern.
 This fragmentation pattern is the m/z of the various fragments and their intensities,
 which is unique to each peptide.
+Data dependent acquisition (DDA) is a data aquisition technique that looks at particular parts
+of the HPLC curve and particular ion species at high detail.
+In contrast, data independent acquisition (DIA) scans all possible spectra consistently.
+DIA provides more complex data, and allows for discovery of novel species, which is why
+we will be focusing on DIA in this workshop.
 
 Due to this complexity, and the huge size of the datasets, proteomics analysis is particularly
 challenging.
@@ -134,11 +139,15 @@ to make an apptainer image that we can use on shared systems like the Burnet HPC
 
 ## Other things FragPipe needs to run
 
-* Raw data
+* Raw data - we're using files generated using the Orbitrap Astral Mass Spectrometer in DIA mode.
 
-* Manifest file
+* Manifest file - it is a list of raw proteome data.
 
 * Workflow file
+
+* Peptide library
+
+### Raw data
 
 Raw data for this workshop is available from PRIDE database under accession number PXD058340.
 We also have a local copy which you can use.
@@ -148,9 +157,93 @@ Just be aware that the raw data is huge (56GB).
 Here is the link.
 /home/mark.ziemann/projects/proteomics/raw_data
 
-
 ```
 cp -r /home/mark.ziemann/projects/proteomics/raw_data .
 ```
 
-Then we need a manifest file
+### Manifest file
+
+Use `nano` or another editor to create a file called `sampletest.manifest-fp.manifest`
+Below, ensure there is one tab between the first two fields and two tabs between the second and third fields.
+This file shows FragPipe where the input files are.
+
+```
+/home/projects/proteomics/PXD058340/20240911_AST0_NEO4_IAH_collab_SAG_U2OS_Frac_Control_Chrom_01.raw  chr1    DIA
+/home/projects/proteomics/PXD058340/20240911_AST0_NEO4_IAH_collab_SAG_U2OS_Frac_Control_Chrom_02.raw  chr2    DIA
+/home/projects/proteomics/PXD058340/20240911_AST0_NEO4_IAH_collab_SAG_U2OS_Frac_Control_Chrom_03.raw  chr3    DIA
+/home/projects/proteomics/PXD058340/20240911_AST0_NEO4_IAH_collab_SAG_U2OS_Frac_Control_Chrom_04.raw  chr4    DIA
+/home/projects/proteomics/PXD058340/20240911_AST0_NEO4_IAH_collab_SAG_U2OS_Frac_Control_Sol_01.raw  sol1    DIA
+/home/projects/proteomics/PXD058340/20240911_AST0_NEO4_IAH_collab_SAG_U2OS_Frac_Control_Sol_02.raw  sol2    DIA
+/home/projects/proteomics/PXD058340/20240911_AST0_NEO4_IAH_collab_SAG_U2OS_Frac_Control_Sol_03.raw  sol3    DIA
+/home/projects/proteomics/PXD058340/20240911_AST0_NEO4_IAH_collab_SAG_U2OS_Frac_Control_Sol_04.raw  sol4    DIA
+```
+
+### Workflow file
+
+The workflow file is 375 lines, so I can't describe it in detail here, but it has parameters for all the
+programs that FragPipe uses.
+
+On the HPC, use the following command to copy it:
+```
+cp /home/mark.ziemann/projects/proteomics/fragpipe_work/sampletest.workflow .
+```
+
+Use `nano` or `less` to inspect it.
+You'll see that the first parameter is the path to a peptide library.
+This needs to point to the location of your peptide library inside the container.
+
+### Peptide library
+
+Fragpipe requires a reference proteome to search against.
+Here I am using Human UniProt with some added decoys.
+Decoys here are synthetic sequences which are the reverse of the human proteome.
+The filename you should have is `UP000005640_9606_withDECOYS.fasta`.
+In this file, the entries starting with `>rev_sp` are reverse sequences,
+while those beginning with `>sp|` are normal sequences.
+
+## Familiarise yourself with the Apptainer pipeline
+
+Use this apptainer command to enter a container.
+See that the current working directory is bound.
+
+```
+apptainer run --writable-tmpfs fragpipe.sif bash
+```
+
+Find the fragpipe executable.
+
+```
+cd /fragpipe_bin/fragpipe-23.1/fragpipe-23.1/bin
+ls
+```
+
+check the location of the manifest file, workflow file, raw data files and peptide library file
+are all correct.
+
+## Run the pipeline
+
+Now we can execute the workflow (after provisioning a server with 64GB RAM).
+
+Before running the container again, set the locale, otherwise we will get an error.
+
+```
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+apptainer run --writable-tmpfs fragpipe.sif bash
+```
+
+Now in the container, navigate to `/fragpipe_bin/fragpipe-23.1/fragpipe-23.1/bin`
+then execute the command:
+
+```
+./fragpipe --headless --workflow ~/projects/proteomics/sampletest.workflow \
+  --manifest ~/projects/proteomics/sampletest.manifest.fp-manifest \
+  --workdir ~/projects/proteomics/workingdir01 \
+  --config-tools-folder /fragpipe_bin/dependencies/
+```
+
+This might take a few hours to complete.
+In the meantime, take a look at the dataset processed previously.
+
+## Here's one we prepared earlier
+
