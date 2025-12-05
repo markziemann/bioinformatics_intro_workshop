@@ -243,7 +243,7 @@ then execute the command:
 ./fragpipe --headless --workflow ~/projects/proteomics/sampletest.workflow \
   --manifest ~/projects/proteomics/sampletest.manifest.fp-manifest \
   --workdir ~/projects/proteomics/workingdir01 \
-  --config-tools-folder /fragpipe_bin/dependencies/
+  --config-tools-folder /fragpipe_bin/dependencies/ \
   --ram 60 --threads 8
 ```
 
@@ -264,9 +264,9 @@ The most import ones are:
 
 ⋅⋅⋅⋅* report.gg_matrix.tsv intensities on gene level (9386 genes detected)
 
-....* report.pg_matrix.tsv intensities on the peptide level (9390 proteins detected)
+....* report.pg_matrix.tsv intensities on the protein level (9390 proteins detected)
 
-....* report.pr_matrix.tsv Intentities on the protein level (121010 peptides detected)
+....* report.pr_matrix.tsv Intentities on the peptide level (121010 peptides detected)
 
 ## Short guide to downstream analysis
 
