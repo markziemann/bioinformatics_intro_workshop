@@ -1,0 +1,142 @@
+# Snakefile week 9
+# Define input files
+SAMPLES = ["ERR10627364", "ERR10627365", "ERR10627366"]
+GENOME = "ref/Plasmodium_falciparum.ASM276v2.dna_sm.toplevel.fa.gz"
+GENOME2 = "ref/Plasmodium_falciparum.ASM276v2.dna_sm.toplevel.fa"
+
+rule all:
+    input:
+        "variants/combined.vcf.gz.csi"
+
+rule gunzip_genome:
+    input:
+        GENOME
+    output:
+        GENOME2
+    shell:
+        "gunzip -c {input} > {output}"
+
+rule index_genome:
+    input:
+        ref = GENOME2
+    output:
+        amb = GENOME2 + ".amb",
+        ann = GENOME2 + ".ann",
+        bwt = GENOME2 + ".bwt",
+        pac = GENOME2 + ".pac",
+        sa  = GENOME2 + ".sa"
+    threads: 4
+    resources:
+        mem_mb = 8000,
+        runtime = 180
+    shell:
+        """
+        apptainer run --writable-tmpfs bwa.sif index {input.ref}
+        """
+
+rule faidx:
+    input:
+        GENOME2
+    output:
+        GENOME2 + ".fai"
+    shell:
+        "apptainer run --writable-tmpfs samtools.sif faidx {input}"
+
+rule trim_reads:
+    input:
+        r1 = "fastq/{sample}_R1.fastq.gz",
+        r2 = "fastq/{sample}_R2.fastq.gz"
+    output:
+        r1 = "trimmed/{sample}_R1_trimmed.fastq.gz",
+        r2 = "trimmed/{sample}_R2_trimmed.fastq.gz"
+    resources:
+        mem_mb = 4000,
+        runtime = 180
+    threads: 4
+    shell:
+        """
+        apptainer run --writable-tmpfs trimmomatic.sif PE -threads {threads} {input.r1} {input.r2} \
+        {output.r1} /dev/null {output.r2} /dev/null \
+        ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+        """
+
+rule align_reads:
+    input:
+        ref = GENOME2,
+        idx = expand(
+            GENOME2 + ".{ext}",
+            ext=["amb", "ann", "bwt", "pac", "sa"]
+        ),
+        r1 = "trimmed/{sample}_R1_trimmed.fastq.gz",
+        r2 = "trimmed/{sample}_R2_trimmed.fastq.gz"
+    output:
+        "bam/{sample}.bam"
+    resources:
+        mem_mb = 8000,
+        runtime = 180
+    threads: 4
+    shell:
+        """
+        apptainer run --writable-tmpfs bwa.sif mem -t {threads} {input.ref} {input.r1} {input.r2} | \
+        apptainer run --writable-tmpfs samtools.sif view -b - | \
+        apptainer run --writable-tmpfs samtools.sif sort -o {output}
+        """
+
+rule index_bam:
+    input:
+        "bam/{sample}.bam"
+    output:
+        "bam/{sample}.bam.bai"
+    shell:
+        "apptainer run --writable-tmpfs samtools.sif index {input}"
+
+rule call_vars:
+    input:
+        bam = "bam/{sample}.bam",
+        bai = "bam/{sample}.bam.bai",
+        fai = GENOME2 + ".fai",
+        ref = GENOME2
+    output:
+        "variants/{sample}.bcf"
+    resources:
+        mem_mb = 8000,
+        runtime = 180
+    threads: 4
+    shell:
+        """
+        apptainer run --writable-tmpfs bcftools.sif mpileup -f {input.ref} {input.bam} | \
+        apptainer run --writable-tmpfs bcftools.sif call -mv -Ob -o {output}
+        """
+
+rule index_bcf:
+    input:
+        "variants/{sample}.bcf"
+    output:
+        "variants/{sample}.bcf.csi"
+    shell:
+        "apptainer run --writable-tmpfs bcftools.sif index {input}"
+
+rule merge_vcfs:
+    input:
+        bcfs = expand("variants/{sample}.bcf", sample=SAMPLES),
+        idx  = expand("variants/{sample}.bcf.csi", sample=SAMPLES)
+    output:
+        vcf = "variants/combined.vcf.gz"
+    resources:
+        mem_mb = 8000,
+        time = "04:00:00"
+    shell:
+        """
+        apptainer run --writable-tmpfs bcftools.sif merge \
+            -Oz \
+            -o {output.vcf} \
+            {input.bcfs}
+        """
+
+rule index_combined_vcf:
+    input:
+        "variants/combined.vcf.gz"
+    output:
+        "variants/combined.vcf.gz.csi"
+    shell:
+        "apptainer run --writable-tmpfs bcftools.sif index {input}"
