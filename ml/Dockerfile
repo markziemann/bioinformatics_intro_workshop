@@ -16,8 +16,11 @@ RUN Rscript -e 'BiocManager::install(c("biomaRt","clusterProfiler","DESeq2","edg
 
 RUN Rscript -e 'install.packages(c("vioplot","Hmisc","rmdformats"))'
 
+<<<<<<< HEAD
 RUN Rscript -e 'install.packages(c("timechange","ModelMetrics"))'
 
+=======
+>>>>>>> 11b0a78f2b6facb8d51dfbbe859a2103986b5f3d
 RUN Rscript -e 'install.packages("caret", dependencies = c("Depends", "Suggests"))'
 
 # get a clone of the codes

@@ -96,6 +96,8 @@ mds <- cmdscale(dist(t(scale(x))),k=3)
 
 ```
 
+You could also use the `princomp()` package.
+
 Next, use `plot()` to plot the first two dimensions.
 
 Use `text()` to overlay the sample names.
@@ -112,6 +114,7 @@ dimensions.
 In this step we will conduct differential analysis.
 We will use DESeq2 because it has superior accuracy compared to other similar
 packages.
+Make yourself familiar with the [DESeq2 page on Bioconductor](https://bioconductor.org/packages/release/bioc/html/DESeq2.html).
 
 Here is a general workflow of how DESeq2 can be applied, which does a `paired`
 analysis.
@@ -203,13 +206,21 @@ which are normal.
 I'm not sure whether we will have enough time to go through this in the workshop,
 so I have included a simple enrichment analysis using the `fgsea` package.
 
+Gene sets of Reactome pathways can be downloaded [here](https://ziemann-lab.net/public/bioinfo_workshop/ReactomePathways_2025-10-15.gmt).
+They are loaded in as list of vectors.
+
 The results can be shown as a volcano plot, or as a barplot of the sets with the
 biggest magnitude enrichment scores that need the preset significance threshold
 (FDR<0.01).
 
+Below is an example workflow using
+
 ```
 
 library("fgsea") #bioconductor
+
+gs <- gmtPathways("ReactomePathways_2025-10-15.gmt")
+head(gs,3)
 
 dge$stat[which(is.na(dge$stat))] <- 0 # substitute 0 for NA vals
 
@@ -255,7 +266,7 @@ Specify this file in the YAML header, along with the BIB file.
 bibliography: references.bib
 csl: bmc-bioinformatics.csl
 
-Then use BibGuru or CiteDrive to get the .bib format of your articles.
+Then use Google Scholar, BibGuru or CiteDrive to get the .bib format of your articles.
 The BIB entry for the DESeq2 paper looks like this:
 
 ```
