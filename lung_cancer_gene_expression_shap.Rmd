@@ -1,5 +1,5 @@
 ---
-title: "Workshop6 lung cancer RNA-seq"
+title: "Interpreting an ML model with SHAP values"
 author: "Mark Ziemann"
 date: "`r Sys.Date()`"
 output:
@@ -21,25 +21,17 @@ Cho JW, Shim HS, Lee CY, Park SY et al. The importance of enhancer methylation f
 
 ```{r setup}
 
-# install CRAN packages
-#install.packages(c("kableExtra","gplots"))
-
-# install bioconductor packages
-#if (!require("BiocManager", quietly = TRUE))
-#    install.packages("BiocManager")
-#BiocManager::install(c("DESeq2","fgsea"))
-
 suppressPackageStartupMessages({
   library("kableExtra")
   library("DESeq2")
   library("gplots")
   library("beeswarm")
-
+  library("parallel")
   library("kableExtra")
   library("xgboost")
   library("iml")
   library("ggplot2")
-
+  library("beeswarm")
 })
 
 ```
@@ -291,39 +283,72 @@ table(test_labels == prediction)[2] / length(prediction)
 # Create a Predictor object
 predictor <-  iml::Predictor$new(model, data = train_data)
 
-# Calculate SHAP values for all observations
-
+# Example for how to calculate SHAP values for one observations
 shapley <- iml::Shapley$new(predictor, x.interest = train_data[1, ])
 shapley
 
-shapley <- mclapply(1:nrow(train_data), function(i) {
+# Now calculate all SHAP values
+# mclapply causes this to freeze, so we need to do it single threaded for now
+shapley <- lapply(1:nrow(train_data), function(i) {
   iml::Shapley$new(predictor, x.interest = train_data[i, ])
-},mc.cores=8)
+})
+
+shapley[[1]]
+
+shap_list <- lapply(1:length(shapley), function(i) { shapley[[i]]$results })
+shap_df <- do.call(rbind, shap_list)
+meanabs <- function(x) { mean(abs(x)) }
+shap_dfa <- aggregate(phi ~ feature,shap_df,FUN=meanabs )
+shap_dfa <- shap_dfa[order(-shap_dfa$phi),]
+head(shap_dfa)
 
 ```
 
-Now compute SHAP values for many samples.
+In this simple model, only the SERPINE2 gene was used to classify the tumor and control samples. So it is not a great example.
 
-```{r,multishap}
+## Remove SERPINE2 from data
 
-shap_list <- lapply(1:nrow(train_data), function(i) {
-  s <- Shapley$new(predictor, x.interest = train_data[i, ])
-  data.frame(
-    row = i,
-    feature = s$results$feature,
-    phi = s$results$phi
-  )
+Let's see if the model is different or performs worse than the original one.
+
+```{r,remove_serpine2}
+
+train_data2 <- train_data[,-which(colnames(train_data)=="SERPINE2")]
+model2 <- xgboost(x = train_data2, y = train_labels, nrounds = 100, objective = "reg:squarederror")
+test_data2 <- test_data[,which(colnames(test_data)!="SERPINE2")]
+
+pred2 <- predict(model2, test_data2)
+prediction2 <- as.numeric(pred2 > 0.5)
+table(test_labels == prediction2)
+table(test_labels == prediction2)[2] / length(prediction2)
+
+predictor2 <-  iml::Predictor$new(model2, data = train_data2)
+shapley2 <- iml::Shapley$new(predictor2, x.interest = train_data2[1, ])
+
+shapley2 <- lapply(1:nrow(train_data2), function(i) {
+  iml::Shapley$new(predictor2, x.interest = train_data2[i, ])
 })
 
-shap_df <- do.call(rbind, shap_list)
+shapley2[[1]]
 
-meanabs <- function(x) { mean(abs(x)) }
+shap_list2 <- lapply(1:length(shapley2), function(i) { shapley2[[i]]$results })
+shap_df2 <- do.call(rbind, shap_list2)
+shap_dfa2 <- aggregate(phi ~ feature,shap_df2,FUN=meanabs )
+shap_dfa2 <- shap_dfa2[order(-shap_dfa2$phi),]
+head(shap_dfa2)
 
-shap_dfa <- aggregate(. ~ feature,shap_df,FUN=meanabs )
+```
 
-shap_dfa <- shap_dfa[order(-shap_dfa$phi),]
+Barplot.
 
-head(shap_dfa)
+```{r,shap_barplot}
+
+modelgenes <- head(shap_dfa2,10)$feature
+modelweights <- head(shap_dfa2,10)$phi
+names(modelweights) <- modelgenes
+
+par(mar=c(5.1,8.1,4.1,2.1))
+barplot(rev(modelweights),horiz=TRUE,las=1,xlab="Mean Abs Phi values",main="Model weights")
+par(mar=c(5.1,4.1,4.1,2.1))
 
 ```
 
@@ -368,12 +393,58 @@ shapley <- iml::Shapley$new(predictor2, x.interest = train_data2[1, ])
 
 ```
 
+Now look at the direction of the SHAP values as well.
+
+SHAP values for normal and cancer samples are separated for charting.
+
+```{r,interpret2}
+
+shap_l <- lapply(topgenes,function(x) { shap_df2[which(shap_df2$feature == x),"phi"] } )
+names(shap_l) <- topgenes
+
+which(lapply(shap_l,meanabs)>0)
+
+mytopmodelgenes <- names(which(lapply(shap_l,meanabs)>0))
+shap_top <- shap_l[which(names(shap_l) %in% mytopmodelgenes)]
+shap_top <- shap_top[order(unlist(lapply(shap_top,median)))]
+
+shap_top
+
+boxplot(shap_top,cex=0,horizontal=TRUE,las=1,col="white",main="Phi values for training data")
+beeswarm(shap_top,horizontal=TRUE,pch=19,cex=0.4,add=TRUE,col="darkgray")
+
+LEN=54
+seq(1,LEN,2)
+
+NORM <- lapply(shap_top,function(x) { x[seq(1,LEN,2)] })
+CANC <- lapply(shap_top,function(x) { x[seq(1,LEN,2)+1] })
+boxplot(shap_top,cex=0,horizontal=TRUE,las=1,col="white",main="Phi values for training data")
+mtext("blue=normal, red=cancer sample")
+beeswarm(NORM,horizontal=TRUE,pch=19,cex=0.4,add=TRUE,col="blue")
+beeswarm(CANC,horizontal=TRUE,pch=19,cex=0.4,add=TRUE,col="red")
+
+```
+
+From this we can see that of all the genes in this model, RGCC is the most inflential. Higher expression of RGCC is associated with cancer classification. RGCC, LMO7, CLIC5 and CALML3 are associated with cancer, while higher AGER is associated with normal tissue.
+
+## Conclusion
+
+Here, we trained an XGboost model on a small number of lung cancer datasets (54) using only the top 50 genes from a limma analysis.
+Testing on a separate 20 samples found it to be approximately 95% accurate.
+We used SHAP analysis to understand how strongly the genes influence the model.
+Initially the model exclusively used SERPINE2 to classify.
+Another model was generated after removing SERPINE2 and it showed RGCC, CALML3, LMO7, CLIC5, AGER and ZIC2 could also be informative in a model.
+This second model was also 95% accurate.
+This small example shows how a panel of genes can be selected from an ML model.
+The SHAP analysis here can be applied to different ML models such as random forest, support vector machine, etc.
+This is one method to interpret ML models.
+This type of approach could be used for various omics data such as proteomics, microbiome, or DNA methylation.
 
 ## Session information
 
 ```{r,session}
 
-save.image("w6_workflow.Rdata")
+save.image("lung_cancer_gene_expression_shap.Rdata")
 
 sessionInfo()
 
