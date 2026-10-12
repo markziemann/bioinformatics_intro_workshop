@@ -1,12 +1,12 @@
 ---
-title: "Bioinformatics data skills workshop - Session 1: getting started on the Linux command line"
+title: "Bioinformatics data skills workshop - Session 3: Introduction to R data structures and visualisation"
 author: "Burnet Bioinformatics Group"
 date: "`r Sys.Date()`"
 output:
   html_document:
     theme: simplex
     toc: true
-    code_folding: hide
+    code_folding: show
     fig_width: 7
     fig_height: 7
     toc_float:
@@ -17,681 +17,1119 @@ Source: https://github.com/markziemann/bioinformatics_intro_workshop
 
 ![Image credit: Steven Lokwan.](images/Header-Image-crop-1024x559.jpg)
 
-# Welcome
+## What is R and why use it?
 
-## Goals
+A statistical computing and data visualisation language, derived from an earlier
+language called S.
 
-The goals of this workshop series are to:
 
-* Help Burnet researchers become more confident in conducting bioinformatics analysis and other
-big data tasks.
+## What a typical workflow looks like
 
-* To familiarise interested researchers with Burnet's high performance computing (HPC)
-infrastructure.
+* Comments
 
-* To grow and strengthen Burnet's data analytics capabilities and community.
+* Load libraries
 
-* To establish recommended best practices, which bioinformatics researchers can use to make
-their work more reproducible and rigorous.
+* Read data
 
-## Outline
+* Cleaning
 
-1. Getting started on the Linux command line
+* Analysis
 
-2. Key concepts of data and code management
+* Data visualisation
 
-3. Introduction to R data structures and visualisation
+* Save files
 
-4. Mastering R Studio with R Markdown reports and version control
+* Execute
 
-5. Intermediate R - functions, vectorization, parallel programming
+This week, our goal is to learn:
 
-6. Hands on omics analysis reports with R Markdown
+* how to work with R on the command line and in RStudio on the HPC
 
-7. Containers for reproducible bioinformatics
+* about different data structures in R
 
-8. Introduction to Slurm for high performance computing
+* how to do basic math in R
 
-9. SnakeMake and Targets for workflow management
+## Setting up an interactive R session on the HPC
 
-10. Machine learning in R with caret
+If you are connected to the Burnet network, visit the HPC documentation [here](http://burnethpcdocs.domain.internal.burnet.edu.au/getting-started).
 
-11. Automated natural language processing with Ollama, OpenAI and Anthropic LLMs
-
-12. Streamlined proteomics analysis using FragPipe
-
-## Knowing your keyboard
-
-We use lots of special characters, so here is the vocabulary that we will use.
-
-* ! exclamation (bang)
-
-* @ at symbol
-
-* \# hash
-
-* $ dollar
-
-* % percent
-
-* ^ hat
-
-* & ampersand
-
-* \* asterix, star
-
-* ~ tilda
-
-* \- dash
-
-* \+ plus
-
-* () brackets, parentheses, round brackets
-
-* [] square brackets
-
-* {} curly brackets, braces
-
-* <> angled brackets
-
-* / slash
-
-* \\ backslash
-
-* \| pipe
-
-* "" double quotes
-
-* '' single quotes
-
-* _ underscore
-
-* ` tick
-
-* . dot
-
-* , comma
-
-* : colon
-
-* ; semicolon
-
-* ? question mark
-
-## What is Unix/Linux?
-
-Unix is an operating system developed by Bell Labs designed for other software developers.
-Initial release in 1971.
-
-![Image credit: BlockZeta via YouTube: https://www.youtube.com/watch?v=DXh2_CTJW9w](images/maxresdefault.jpg)
-
-There are many derivations of Unix including Mac OS, BSD, Solaris, Linux, etc.
-Most web servers and research computing clusters use Unix (like 90%), so the Unix environment
-is essential for companies to keep their web sites and applications running and researchers
-to process their large data sets.
-
-In this workshop we will be using Ubuntu Linux, which is one of the more popular OSs used in
-bioinformatics.
-It has a large and well maintained package management system, large userbase and is used on
-both servers and desktop systems.
-
-![Image credit: Suparna Ganguly](images/distros.jpeg)
-
-The command line interface of Unix systems is called a "shell" because it is the outermost
-layer around the operating system.
-In Unix, there are a variety of shells (command interpreters), but the most used one on Linux
-is Bash, the "Bourne again shell".
-Shell scripts are lists of commands interpreted and run by the OS.
-It is important to know that due to the subtly different behaviour of shells across OSs,
-that shell scripts are not very portable.
-That is, a script written for Mac OS, is unlikely to work the same on Ubuntu, or Solaris.
-
-A Bash script contains commands that are "built-in" to Bash, as well as other commands that
-are installed elsewhere on the OS.
-This enables Bash to utilise a great variety of external tools for scientific computing and
-act as a type of "glue" to run complex workflows.
-
-## Setting up your command line environment
-
-You will need access to a Linux (Ubuntu) command line interface for this workshop series.
-My recommendation is that we work on Burnet's shared computing cluster (HPC).
-The benefit of this is that those systems are administered by dedicated HPC staff, so they can
-help you resolve issues that you might encounter.
-Follow the instructions [here](http://burnethpcdocs.domain.internal.burnet.edu.au/getting-started)
-to request access.
-Due to the strict network security settings at Burnet, secure shell (SSH) is blocked by
-default.
-You will need to apply for SSH access, which can be requested at the [IT Helpdesk](https://helpdesk.burnet.edu.au/).
-Mention in your ticket that you would like access to the HPC cluster from your laptop and desktop.
-I'd also recommend requesting VPN access so you can access the HPC while offsite.
-If you are stuck with any of these steps, please get in touch with Mark (mark.ziemann@burnet.edu.au),
-and he will help move things along.
-Hopefully, you will have everything sorted by the first session, but don't worry if it isn't
-finalised, as we have a fall-back solution.
-
-If you are using a Windows PC, you can use the built-in SSH client to log in to the HPC
-(see the [guide](https://learn.microsoft.com/en-us/windows/terminal/tutorials/ssh)).
-
-If you are using a Mac, you can search for the "Console" among your apps.
-
-If you are using a Linux PC, search for the "Terminal" among your apps.
-
-In your window, use the following command to log into the Burnet HPC replacing your username.
+Create a new tmux session which will be persistent.
+Then make an interactive SLURM session where you can run some analysis.
+You can customise the threads, memory and time to your needs.
 
 ```
-ssh -Y john.smith@burnethpc.domain.internal.burnet.edu.au
+tmux new -s mysession
+
+srun -p interactive --pty --time=180 --threads=2 --mem=8G bash -i
 ```
 
-This will only work if you are connected to the Burnet network on site, or via the VPN.
-You will be asked for your HPC password.
-
-# Gentle introduction to the Linux command line
-
-## The command prompt
-
-Once logged in you will be greeted with an active cursor, where you can start entering
-commands.
+Then run an example command.
+Here we are grabbing some random data and compressing it with pigz, which is a
+parallel compression tool.
+This will use all available CPU threads.
 
 ```
-john.smith@bnt-hpchn-01:~$
+head -1000 /dev/random | pigz -p2 > /dev/null
+```
+
+If you want to run some scripts, you will likely need to load modules.
+This is a good way to maintain parallel version of languages like R.
+Use the following commands to show the available modules.
+
+```
+module avail
+
+module spider
+```
+
+Try loading R version 4.3.2.
+
+```
+module load R/4.3.2
+```
+
+Now run R and check the version and exit.
+
+```
+R
+sessionInfo()
+q()
+```
+
+Exit interactive sessions with `exit`.
+
+Non interactive jobs can be scheduled using SLURM, using the [HPC docs](http://burnethpcdocs.domain.internal.burnet.edu.au/slurm) as a guide.
+
+## RStudio session
+
+Rstudio offers some benefits due to its interactive and graphical nature.
+
+```
+sbatch --time=180 --threads=2 --mem=8G  /software/jobs/rstudio_4.4.job
+```
+
+It will say "Submitted batch job 1234" (the number will be different),
+and will create a file in the current working directory called rstudio.job.1234.
+List the contents with `ls` to confirm that the file was created,
+then type `cat rstudio.job.1234` to read the instructions to connect.
+
+Let's get to know the Rstudio interface a bit better.
+It consists of a menu bar at the top of the browser window and four panels below:
+
+| Menu Bar |
+|:----:|:----:|
+| Top left: Script (type and save your scripts here)   | Top right: Global Environment (R data objects you can work with) |
+| Bottom left: Console (commands are executed here)  |  Bottom right: Files, Plots and help pages  |
+
+If you cannot see the Script panel, click "New Script" on the menu bar and it should appear.
+
+Let’s watch a video together to learn the basics of the Rstudio environment.
+
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=5YmcEYTSN7k
+" target="_blank"><img src="http://img.youtube.com/vi/5YmcEYTSN7k/0.jpg"
+alt="IMAGE ALT TEXT HERE" width="480" height="360" border="10" /></a>
+
+## Intro to R part 1
+
+Here we will begin with simpler data structures and commands.
+
+### Arithmetic
+
+Open up your Rstudio and try these commands by typing in the script panel and hitting the “Run” button or Ctrl+Enter, observing the output.
+
+We'll start with some arithmetic.
+
+```{r,math1}
+
+1+2
+10000^2
+sqrt(64)
 
 ```
 
-Let's discuss the parts of this command prompt.
+Notice that as you start typing commands like `sqrt` that Rstudio will give you suggestions, you can use the tab key to autocomplete.
 
-Typically Unix commands have the following syntax:
+### Working with variables
 
-```
-<mycommand> <option1> <option2> <optionN> <myobject>
-```
+Use the `<-` back arrow or `=` to define variables.
 
-The first word is the command itself and the last word is the input, and in between them you
-will find the options.
-Options are optional, and some commands don't even require an input.
-Unlike a lot of other programming languages, the whitespaces in bash are very important.
+```{r,math2}
 
-## Your first shell commands
+s <- sqrt(64)
+s
 
-Let's start with a simple print message:
-
-```
-echo "Hello world!"
+a <- 2
+b <- 5
+c <- a*b
+c
 
 ```
 
-Now try `echo -n "Hello world"` , do you notice the difference.
+### Vectors
 
-Now that you have run a few commands, tell me what the up and down arrows do?
+We can also do operations on vectors of numbers.
 
-What do the home and end buttons do?
+Vectors are specified with c-brackets like this `c(1,2,3)`
 
-Like other programming languages, bash also has the ability to store values.
-Try the following commands to grasp how bash can do integer arithmetic and
-parameter expansion.
+```{r,math3}
 
-```
-a=123
-b=456
-echo $a$b
-echo ${a}${b}
-echo {1..6} {A..K}
-echo {1..6}{A..K}
-echo $((a+b))
-echo $((a*b))
-echo $((a-b))
-echo $((a/b))
-echo $((a+1))
-((a++))
-echo $a
+c(1,2,3)
+sum(c(1,10,100))
+mean(c(1,10,100))
+median(c(1,10,100))
+max(c(1,10,100))
+min(c(1,10,100))
 
 ```
 
-You can see from the above example that bash is limited to integer arithmetic with its
-built in tools.
-If you need to do more complicated calculations, you can use `awk`.
+### Saving variables
 
-```
-awk "BEGIN{print $a / $b}"
-awk "BEGIN{print $a + $b}"
-awk "BEGIN{print $a * $b}"
+To make things easier to read and write, we can save the vector as a variable `a`.
+Then we can work on `a`.
 
-```
+We use the `<-` to save objects in R, but `=` also works.
 
-## Quotes
+`length ` tells us the number of elements in the vector which is very useful.
 
-Misuse of quotes is one of the main sources of errors and frustration in shell scripts.
-Let's go through some examples to see why this is so important.
+```{r,math4}
 
-```
-echo $a "$a" '$a'
-
-```
-
-You see that the single quotes prevents the variable to be interpreted literally, while
-double quotes allow the variable interpretation before executing echo.
-Compare these two:
-
-```
-awk "BEGIN{print $a / $b}"
-awk 'BEGIN{print $a / $b}'
+a <- c(1,10,100)
+a
+2*a
+a+1
+sum(a)
+mean(a)
+median(a)
+sd(a)
+var(a)
+length(a)
 
 ```
 
-You can see that the single quotes block variable substitution.
+### R object types
 
-## Nested commands
+Whenever we are using an R object we should check exactly what sort of object it is.
+This is the most common type of error you will encounter.
 
-Nesting commands allows us to complete complex tasks in a few lines of code.
-You can put a command inside dollar brackets `$()` and it will be executed before the
-main command.
+We use the `str()` command to check the structure.
+Other commands we can use to investigate the data structure include `class()` and `typeof()`
 
-```
-d=$( awk "BEGIN{print $a / $b}" )
+The colon `:` can be used to specify a series or range.
+For example 1:5 for numbers 1 to 5.
 
-echo $d
+Note the different object types here:
 
-```
+A is a Numerical vector
 
-## Pipes
+B is Numerical vector (series)
 
-Another way to write the above calculation is to output the variables with `echo` and direct
-the output to AWK using the pipe operator `|`.
+C is a named numerical vector
 
-```
-echo $a $b | awk ‘{print $1 / $2}'
+D is a character string
 
-```
+E is a character vector
 
-Generally speaking, pipes are better than nested commands as the resulting code is more
-readable and modifiable.
+F is a named character vector
 
-## Output and input redirection
+```{r,math5}
 
-If we wanted to save the results to a file, we add this symbol '>'
+A <- c(1,10,100)
+A
+str(A)
+class(A)
+typeof(A)
 
-```
-echo $a $b | awk '{print $1 / $2}' > math_result.txt
+B <- 1:10
+B
+str(B)
+class(B)
+typeof(B)
 
-```
+C <- c("prime1"=2, "prime2"=3, "prime3"=5, "prime4"=7)
+C
+str(C)
+class(C)
+typeof(C)
 
-If we want to append more data to the file we can use this symbol '>>'
+D <- "x1"
+D
+str(D)
+class(D)
+typeof(D)
 
-```
-echo $a $b | awk '{print $1 * $2}' >> math_result.txt
-
-```
-
-Be mindful that '>' totally overwrites a file without a prompt, so be very careful when using.
-
-## Essential Unix commands
-
-As a class, complete the following table describing important commands.
-
-| Command | What does it do? | Reproducible example with options|
-| --- | --- | --- |
-| echo | prints out a line of text | `echo "Hello, world!" ` |
-| pwd |     |     |
-| cd |     |     |
-| ls |     |     |
-| man |     |     |
-| mkdir |     |     |
-| cat  |     |     |
-| head, tail |     |     |
-| less, more |     |     |
-| nano |     |     |
-| cp |     |     |
-| mv |     |     |
-| rm |     |     |
-| history |     |     |
-| wc |     |     |
-| cut |     |     |
-| awk |     |     |
-| grep |     |     |
-| sed |     |     |
-| paste |     |     |
-| sort |     |     |
-| tr |     |     |
-| top |     |     |
-| free |     |     |
-| df |     |     |
-
-Here is a list of further powerful commands.
-Your homework is to write a 1-sentence description of what they do.
-Provide a reproducible example for **one** of these commands.
-
-* rmdir
-
-* scp
-
-* which, locate
-
-* who, whoami
-
-* time
-
-* date
-
-* du
-
-* watch
-
-* sleep
-
-* gzip
-
-* tar
-
-* zip
-
-* uniq
-
-* find
-
-* join
-
-* md5sum
-
-* wget, curl
-
-* screen, tmux
-
-* nl
-
-* ln
-
-* rev, tac
-
-* diff, comm
-
-* numsum, numaverage
-
-* git
-
-* dig
-
-* column
-
-* seq
-
-## Navigating your home directory
-
-As an exercise, follow the steps:
-
-1. Create a directory called bioinfo_workshop and `cd` into it.
-
-2. Then create a new directory called "session01" and `cd` into that.
-
-3. Use `nano` to create a text file called mytestfile.txt and put a few lines of text
-in it.
-
-4. Try the following commands on the file:
-  * cat
-  * less
-  * wc
-  * sort
-  * cp (copy the file to another name, like mytestfile2.txt)
-  * mv (move the file or change the name)
-  * rm (remove the duplicate file)
-  * sort
-  * du
-
-5. Then use `cd ..` or `cd ~` to return to your home directory.
-
-6. Navigate again to the "session01" directory, but use autocomplete with the `cd` command
-For example, from the home directory, type "cd bio" and then hit the tab key, it should
-autocomplete the rest of the long name, saving you time and being more precise.
-
-## Writing your first script
-
-Now it is time to write your first script.
-Use `nano` to create a new text document.
-At the top of the file, type `#!/bin/bash` and on the second line, write the "hello world"
-example.
-Save the file with a name like `myfirstscript.sh` and close nano.
-
-Mark the file as executable using `chmod +x myfirstscript.sh` and then execute it with the
-following command
-
-```
-./myfirstscript.sh
+E <- c("x1", "y2", "z3")
+E
+str(E)
+names(E) <- c("code1","code2","code3")
+E
+str(E)
+class(E)
+typeof(E)
 
 ```
 
-Alternatively, use this syntax:
+Note how the names can be added during or after the vector is defined.
 
-```
-bash myfirstscript.sh
+### Factors
 
-```
+Factors are an entirely different type of data in R.
+They are represented as non numeric categories, but are stored internally as numerical data.
+Typically factors are used in R for categorical data like biological sex.
+Here the example is an unordered category.
 
-You should see the correct output of "hello world".
+```{r,factors1}
 
-In the next 20 minutes, work with the person next to you to write a new script that finds
-the mean value of five `$RANDOM` calls.
-Use google and stack overflow to help.
-If you get totally stuck, ask a teaching assistant for a hint.
-
-When naming the script, don't use any spaces or special characters and make sure it has `.sh`
-at the end.
-
-Once completed, discuss your solution and results with the groups around you.
-
-## Useful Unix operators: loops and if statements
-
-The `for` loop is super useful for repeating a routine over a lot of different inputs,
-such as input files.
-
-Try the following commands on the prompt:
-
-```
-for letter in A B C ; do echo $letter ; done
-
-for i in {1..4} ; do echo "loop $i" ; done
-
-for j in {A..K} ; do echo "letter $j" ; done
-
-for i in $(seq 1 2 10) ; do echo $i ; done
+x <- factor(c("single", "married", "married", "single","defacto","widowed"))
+x
+str(x)
+levels(x)
 
 ```
 
-When you write for loops in a script file, it is best to break it up over multiple lines
-like this:
+But it is possible to have ordered factors as well.
 
-```
-for i in $(seq 1 2 10) ; do
-  echo $i
-done
+Take this survey result about a product as an example, where respondents rate the food at a restaurant between very poor and very good.
+These responses have a natural order, so it makes sense to treat these as ordered factors.
 
-```
+```{r,factors2}
 
-This also allows you to write more complicated workflows with multiple commands.
-You can also store variables in the loop commands.
-
-Consider the following command, which is trying to count the number of characters in
-each word and output the results.
-
-```
-for WORD in book laptop hat ; do LEN=$(echo $WORD | wc -c) ; echo $WORD $LEN ; done
+y <- c("good", "very good", "fair", "poor","good")
+str(y)
+yy <- factor(y, levels = c("very poor","poor","fair","good","very good"),ordered = TRUE)
+yy
+str(yy)
+levels(yy)
 
 ```
 
-Do you notice any strange behaviour?
+### Logicals
 
-How could we remedy that?
+R also uses `TRUE/FALSE` a lot, as a data type as well as an option when executing commands.
 
-If statements are also really important, as we can get the computer to make simple decisions
-based on inputs.
-For example, we may want to execute a long computationally intensive pipeline, but only if
-the output hasn't already been generated.
-We typically combine the if statement with a `test` command.
-The test command is special because it can also be represented by square brackets.
-Take a few minutes to read `man test` and see what types of tests can be done.
+It is also possible to have vectors of logical values.
 
-```
-if [ ! -r output.txt ] ; then echo "Output not present!" ; fi
+```{r,logicals}
 
-```
+myvariable1 <- 0
+as.logical(myvariable1)
 
-In a script, it is normally written like this:
+myvariable2 <- 1
+as.logical(myvariable2)
 
-```
-if [ ! -r output.txt ] ; then
-  echo "Output not present!"
-fi
-```
-
-We can add an `else` operator to deal with the alternative possibilities.
-
-```
-if [ -r output.txt ] ; then echo "Output is present!" ; else echo "Output not present" ; fi
-
-echo "Result=1234567" > output.txt
-
-if [ -r output.txt ] ; then echo "Output is present!" ; else echo "Output not present" ; fi
+vals <- c(0,1,0,1,0,0,0,1,1,0,1,0,1,0)
+vals
+str(vals)
+as.logical(vals)
 
 ```
 
-In a script, if/else commands are normally written like this:
+### Subsetting vectors
 
-```
-if [ -r output.txt ] ; then
-  echo "Output is present!"
-else
-  echo "Output not present"
-fi
-```
+Next, we would like to subset vectors.
+To do this, we use square brackets and inside the square bracket we indicate which values we want, using 1 for the first and 2 for second and so on.
 
-Your other homework exercise is to write a new script that combines if statements and for
-loops.
-For example, you can use a for loop to generate and save a value of $RANDOM, then use an if
-statement to check whether it is larger than an arbitrary value like 20,000.
+See how it is possible to get the last and second last elements.
 
-# A practical example with NCBI BLAST
+We can subset vectors, run arithmetic operations and save the results to a new variable in a single line.
 
-Now that we have done some introductory things, let's do some actual bioinformatics using
-the classic BLAST tool.
+```{r,vec_subset}
 
-<img src="images/BlastLogo.png" alt="drawing" width="300"/>
+a <- c(2:22,98,124,3002)
+length(a)
+a[2]
+a[3:4]
+a[c(1,3)]
+a[length(a)]
+a[(length(a)-1)]
 
-We will begin by downloading the full *E. coli* genome, uncompressing the file and creating
-a BLAST index.
-
-```
-wget -N --no-check-certificate "https://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/dna/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz"
-
-gunzip -kf Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz
-
-makeblastdb -dbtype nucl -in Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa -input_type fasta -parse_seqids -title ecoli
+x <- a[10:(length(a)-1)] * 2
+x
 
 ```
 
-Now that we have set up the DB, we will need a sequence to query.
+### Coersing R data into different types
 
-We will download the full set of *E. coli* coding sequences and select a few for running a
-BLAST.
+As shown above with commands like `factor` and `as.logical`, it is possible to convert objects into different types.
 
-```
-wget -N --no-check-certificate "https://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/cds/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz"
+Here are some further examples.
 
-gunzip -kf Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz
+Note that some conversions don't make sense, which can cause errors in your analysis.
 
-```
+```{r,conv1}
 
-We need to "unwrap" the fasta file.
-No I'm not expecting you to understand the perl command.
+a <- c(1.9,2.7,3.3,5.1,9.9,0)
+a
+as.integer(a)
+as.character(a)
+as.logical(a)
+as.factor(a)
 
-```
-perl -pe '/^>/ ? print "\n" : chomp' \
-Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa \
-> Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.unwrap.fa
-
-```
-
-Use `head` to visualise the contents of the unwrapped fasta file.
-
-Then sample the first 5 sequences to another file called `sample.fa`
-
-```
-sed 1d Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.unwrap.fa \
-| head > sample.fa
+b <- c("abc","def","ghi","jkl")
+b
+as.numeric(b)
+as.logical(b)
+as.integer(b)
+my_factor <- as.factor(b)
+as.numeric(my_factor)
 
 ```
 
-Now perform a BLASTN search.
+### Creating random and semi random data
 
-```
-blastn -evalue 0.001 \
--db Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa \
--query sample.fa
+This is used a lot in statistics and probability as well as simulation analysis.
 
-```
+```{r,sample1}
 
-That's a lot of output.
-It is a good idea to save the results into a file and view it using `less`.
-
-The output is still very extensive.
-It would be convenient to obtain the results in the form of a summary table.
-
-```
-blastn -evalue 0.001 \
--db Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa \
--query sample.fa \
--outfmt 6
+nums <- 1:5
+sample(x = nums, size = 3)
+sample(x = nums, size = 5)
+sample(x = nums ,size = 10, replace = TRUE)
 
 ```
 
-That's great, but what are column names?
+We can also sample from distributions.
+Here we are sampling 5 numbers from a normal distribution around a median of 10 and standard deviation of 2
 
-Here's the [answer](https://www.metagenomics.wiki/tools/blast/blastn-output-format-6).
+```{r,distributions1}
 
-`qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore`
-
-1.  qseqid      query or source (gene) sequence id
-
-2.  sseqid      subject or target (reference genome) sequence id
-
-3.  pident      percentage of identical positions
-
-4.  length      alignment length (sequence overlap)
-
-5.  mismatch    number of mismatches
-
-6.  gapopen     number of gap openings
-
-7.  qstart      start of alignment in query
-
-8.  qend        end of alignment in query
-
-9.  sstart      start of alignment in subject
-
-10.  send        end of alignment in subject
-
-11.  evalue      expect value
-
-12.  bitscore    bit score
-
-Can you interpret what the results mean?
-
-# Further exercise: determine the limits of BLASTN
-
-Point mutations (base substitutions) make it more difficult for BLAST to find the sequence in
-the genome.
-
-Point mutations can be simulated computationally using the `msbar` command of the `emboss`
-suite of tools.
-
-```
-msbar -sequence mysequence.fa -count 20 -point 4 -block 0 -codon 0 \
--outseq /dev/stdout 2>/dev/null > mysequence_mutated.fa
+d <- rnorm(n = 5, mean = 10, sd = 2)
+d
 
 ```
 
-Using your new found shell scripting skills, find out how many point mutations are required to
-stop BLAST from identifying the source gene AAC73113 in the genomic database.
+Here we are sampling 20 numbers from a binomial distribution with a size of 50 and probability of 0.5
 
-Express the answer as a proportion of the length of the AAC73113 gene.
-As the point mutations are random, you might need to repeat the sequence mutation and search
-many times.
+```{r,distributions2}
 
-Warning: this is a surprisingly tricky task to do. We recommend working in groups.
+b <- rbinom(n = 20, size = 50, prob = 0.5)
+b
+mean(b)
+
+```
+
+### Basic plots
+
+Creating basic plots in R isn't very difficult.
+Here are some simple ones.
+
+Dot plot and line plot.
+
+Adding extra lines.
+
+Changing line colour and adding a subheading
+
+```{r,dot1}
+
+a <- (1:10)^2
+a
+plot(a)
+
+plot(a,type="l")
+
+plot(a,type="b")
+
+plot(a,type="b")
+lines(a/2, type="b",col="red")
+mtext("Black:Growth of A. Red: growth of A/2")
+
+```
+
+Now for scatterplots.
+
+We can change the point type (`pch`) and size (`cex`), as well as add a main heading (`main`).
+
+We can also add additional series of points to the chart and adjust the axis limits with `xlim` and `ylim`.
+
+```{r,scatter1}
+
+x_vals <- rnorm(n = 1000, mean = 10, sd = 2)
+
+d_error <- rnorm(n = 1000, mean = 1, sd = 0.1)
+
+y_vals <- x_vals * d_error
+
+plot(x=x_vals, y=y_vals, xlab="my x values", ylab="my y values")
+
+plot(x=x_vals, y=y_vals, xlab="my x values", ylab="my y values",pch=19, cex=0.5, main="Plot of X and Y values")
+
+plot(x=x_vals, y=y_vals, xlab="my x values", ylab="my y values",pch=19, cex=0.5, main="Plot of X and Y values")
+points(x=x_vals, y=y_vals/2, pch=19, cex=0.5,col="blue")
+
+plot(x=x_vals, y=y_vals, xlab="my x values", ylab="my y values",pch=19, 
+     cex=0.5, main="Plot of X and Y values",
+     ylim=c(0,17))
+points(x=x_vals, y=y_vals/2, pch=19, cex=0.5,col="blue")
+
+```
+
+Let's now run a linear regression on the relationship of y with x.
+
+```{r,scatter2}
+
+linear_regression_model <- lm(y_vals ~ x_vals)
+
+summary(linear_regression_model)
+
+SLOPE <- linear_regression_model$coefficients[1]
+INTERCEPT <- linear_regression_model$coefficients[2]
+
+HEADER <- paste("Slope:",signif(SLOPE,4),"Intercept:",signif(INTERCEPT,4))
+
+plot(x=x_vals, y=y_vals, xlab="my x values", ylab="my y values",pch=19, cex=0.5)
+abline(linear_regression_model,col="red",lty=2,lwd=3)
+mtext(HEADER)
+
+```
+
+Barplots are also really useful.
+
+The quantities in the vector need to have names.
+
+```{r,barplots1}
+
+names(a) <- 1:length(a)
+barplot(a)
+
+barplot(a,horiz = TRUE,las=1, xlab = "Measurements")
+
+```
+
+Boxplots are relatively easy to create.
+
+
+```{r,boxplots1}
+
+boxplot(x_vals, y_vals/2)
+boxplot(x_vals, y_vals/2, names=c("X values", "Y values"),ylab="Measurement (cm)")
+
+```
+
+Enhanced boxplot with beeswarm.
+
+```{r,boxplots2}
+
+library("beeswarm")
+mylist <- list("X vals"=x_vals, "Y vals"=y_vals/2)
+boxplot(mylist, cex=0, ylab="Measurement (cm)",col="white",main="Main title") #cex=0 means no outliers shown
+beeswarm(mylist,pch=1,add=TRUE,cex=0.5)
+
+```
+
+Histograms are easily made.
+
+And it is possible to place multiple charts on a single image.
+
+```{r,histograms1}
+
+hist(x_vals)
+
+par(mfrow = c(2, 1))
+hist(x_vals,main="")
+hist(y_vals,main="")
+
+```
+
+### Part 1: Homework questions for group study
+
+1. calculate the sum of all integers numbers between 500 and 600
+
+2. calculate the sum of all the square roots of all integers between 900 and 1000
+
+3. Create the following datasets and plot a boxplot:
+
+  a. A Sample 10000 datapoints from a normal distribution with mean of 50 and SD of 5
+
+  b. A Sample 10000 datapoints from a normal distribution with mean of 50 and SD of 10
+
+4. Plot a and b above as a scatterplot, and plot the trend line.
+
+5. Plot a and b above as histograms on the same chart.
+
+
+## Intro to R part 2
+
+### Data tables
+
+So far we have only worked with 1 dimensional data, so let's get to know 2D tables.
+
+The two most common types are data frames and matrices.
+We can use `str()` to distinguish them.
+
+```{r,datatables1}
+
+head(freeny.x)
+str(freeny.x)
+
+head(mtcars)
+str(mtcars)
+
+```
+
+As an example of commands that can be used for matrices and not data frames, try `mean()` for `freeny.x` and `mtcars`.
+
+### Basic commands that can be used for data frames and matrices
+
+Find out the number of rows, columns, and simple operations on those rows and columns.
+
+```{r,datatables_commands}
+
+# number of columns
+ncol(mtcars)
+
+# number of rows
+nrow(mtcars)
+
+# dimensions
+dim(mtcars)
+
+# analysing rows and columns
+colMeans(freeny.x)
+colSums(freeny.x)
+rowMeans(freeny.x)
+rowSums(freeny.x)
+
+```
+
+
+You can also transpose a matrix or data frame.
+But be careful, transposing a data frame will automatically convert it to a matrix which could cause downstream errors.
+
+```{r,transpose1}
+
+freeny_flip <- t(freeny.x)
+head(freeny_flip)
+
+mtcars_flip <- t(mtcars)
+head(mtcars_flip)
+str(mtcars_flip)
+
+mtcars_flip <- as.data.frame(mtcars_flip)
+str(mtcars_flip)
+
+```
+
+### Subsetting a data frame
+
+One of the most common tasks in data analysis is to perform filtering.
+Last prac, we found out how to do this with vectors using the square bracket notation. Eg:`x[3]` will retrieve the 3rd element of `x`.
+Square brackets can also be used for two dimensional objects, but we need to provide two indexes.
+The syntax is `df[rows,cols]`.
+
+```{r,datatables2}
+
+# get rows 1-10 of column 2
+freeny.x[1:10,2]
+
+# get rows 1-6 of columns 1-3
+freeny.x[1:6,1:3]
+
+# get rows 1-6 of all columns
+freeny.x[1:6,]
+
+# get all rows for columns 1 and 2 
+freeny.x[,1:2]
+
+```
+
+Now we need to see what happens when we subset just one column or row.
+You can see the default behaviour is to convert the data from matrix format to a vector.
+We can modify this using drop=FALSE to keep it in matrix format.
+
+```{r,datatables3}
+
+# get all rows of column 1
+freeny.x[,1]
+
+# to prevent conversion to vector, use drop=FALSE
+freeny.x[,1,drop=FALSE]
+
+# the same concept for rows
+freeny.x[1,]
+
+# the same concept for rows
+freeny.x[1,,drop=FALSE]
+
+```
+
+Square brackets also works for data frames.
+
+```{r,datatables4}
+
+mtcars[1:10,1:6]
+
+mtcars[,1]
+
+mtcars[,1,drop=FALSE]
+
+```
+
+Data frames also have more options around subsetting columns.
+For example we can subset based on the name of the column or row.
+
+```{r,datatables5}
+
+mtcars[,"cyl"]
+
+mtcars[,c("mpg","wt")]
+
+mtcars["Camaro Z28",c("mpg","wt")]
+
+```
+
+Data frames columns can also be subsetted using the `$` notation.
+The syntax is `df$col`.
+
+```{r,datatables6}
+
+mtcars$mpg
+
+```
+
+This type of notation can even be used to create new columns.
+In this example below, we are converting the miles per gallon value to liters per 100km unit.
+We are also rounding this value to three significant figures.
+
+```{r,datatables7}
+
+mtcars$lper100km <- 235.215 / mtcars$mpg
+
+mtcars[,c(1,ncol(mtcars))]
+
+mtcars$lper100km <- signif(235.215 / mtcars$mpg ,3)
+
+mtcars[,c(1,ncol(mtcars))]
+
+```
+
+
+You may also want to subset a data frame based on the values.
+Let's say you want a car with fuel consumption less than 10 L/100km.
+Let's do it the hard way first.
+
+```{r, subsetting1}
+
+mtcars$lper100km 
+mtcars$lper100km < 10
+which(mtcars$lper100km < 10)
+mtcars[which(mtcars$lper100km < 10),]
+
+```
+
+You can see that this is quite complicated.
+There is an easier way using `subset()`.
+Subset is also perfect for filtering based on more than one criteria using the `&` and '|' operators.
+
+```{r, subsetting2}
+mtcars
+subset(mtcars,lper100km < 10)
+
+# you want an economical AND quick car
+subset(mtcars,lper100km < 10 & qsec < 18)
+
+# you want an economical OR quick car
+subset(mtcars,lper100km < 10 | qsec < 18)
+
+```
+
+Subset also works for strings and factors.
+To look at this we need to look at the `iris` dataset
+
+```{r, subsetting3}
+
+head(iris)
+str(iris)
+
+setosa <- subset(iris,Species == "setosa")
+head(setosa)
+
+```
+
+### Row and columns names
+
+You can use the `colnames` and `rownames` to get the row or column names and even mofidy them.
+
+```{r,rowcolnames1}
+
+colnames(mtcars)
+
+rownames(mtcars)
+
+colnames(mtcars) <- c("miles per gallon",
+              "number of cylinders",
+              "displacement in cubic inches",
+              "gross horsepower",
+              "rear axle ratio",
+              "weight (pounds/1000)",
+              "quarter mile time in seconds",
+              "V or straight cylinder configuration",
+              "transmission type: auto (0) or manual (1)",
+              "number of forward gears",
+              "number of carburetors",
+              "litres per 100km")
+
+head(mtcars)
+
+colnames(mtcars)[1] <- "miles per US gallon"
+
+head(mtcars)
+
+```
+
+If you have a whitespace in the column or row name, it might cause problems later on with subsetting. 
+In that case the column name needs to be wrapped in backticks like this.
+
+```{r, subsetting4}
+
+economical_cars <- subset(mtcars,`litres per 100km` < 10)
+
+economical_cars
+
+```
+
+It is also useful to be able to subset a data frame based on the row names.
+Let's get all the Mercedes models.
+To do this, we need to introduce the `grep()` command which matches strings.
+
+```{r,rowcolnames2}
+
+# let's look again at the car names
+rownames(mtcars)
+
+# lets filter all the ones with "Merc in the name"
+grep("Merc",rownames(mtcars))
+
+# now lets extract out all those rows
+mercs <- mtcars[grep("Merc",rownames(mtcars)),]
+
+mercs
+
+```
+
+### Sorting data tables
+
+We are going to sort our subset of economical cars by their speed based on their quarter mile time.
+To do this, we need to use the `order()` command together with the square brackets.
+`order()` only returns the index of the values, it doesn't actually do the sorting.
+Note that `order()` default behaviour is to bring the smaller values to the top.
+That can be reversed by putting a `-` before the vector being ordered.
+
+```{r,sorting1}
+
+economical_cars
+
+order(economical_cars$`quarter mile time in seconds`)
+
+sorted <- economical_cars[order(economical_cars$`quarter mile time in seconds`),]
+
+sorted[,c(7,ncol(sorted))]
+
+reverse_sorted <- economical_cars[order(-economical_cars$`quarter mile time in seconds`),]
+
+reverse_sorted[,c(7,ncol(reverse_sorted))]
+
+```
+
+### Creating data frames and matrices
+
+First we will create a data frame for some people who completed a survey about their height and weight.
+You should always run `str()` to check that the resulting dataframe has the intended structure.
+You may need to include `stringsAsFactors=FALSE` to protect character strings being converted to factors.
+
+```{r,create_df1}
+
+pnames <- c("Jill", "Matt", "Sam", "Amy", "Bob", "Raj")
+
+pnames
+
+pgender <- as.factor(c("F", "M", "F", "F", "M", "M"))
+
+pgender
+
+pheight <- c(164, 186, 170, 175, 178, 191)
+
+pheight
+
+pweight <- c(54.1, 90.3, 64.8, 66.7, 80.4, 86.9)
+
+pweight
+
+df <- data.frame(pnames,pgender,pheight,pweight)
+
+str(df)
+
+df <- data.frame(pnames,pgender,pheight,pweight,stringsAsFactors = FALSE)
+
+str(df)
+
+df
+
+```
+
+Now we might want to make the row names the name of the person.
+This makes the data tidier, but it won't work if there are more then one entry with the same name.
+You can use the `NULL` to delete columns.
+Deleting rows can be done with square brackets.
+
+```{r,create_df2}
+
+rownames(df) <- df$pnames
+
+df
+
+df$pnames=NULL
+
+df
+
+# delete row 2 and 4
+df <- df[-c(2,4),]
+
+```
+
+Now we will convert df into a matrix.
+
+```{r,create_mat1}
+
+as.matrix(df)
+
+df$pgender <- as.numeric(df$pgender)
+
+mymat <- as.matrix(df)
+
+mymat
+str(mymat)
+
+```
+
+We can also convert other types of data into a matrix.
+To demonstrate this, I'll create some random data with `rnorm` and convert it into a matrix.
+
+```{r,create_mat2}
+
+mydata <- rnorm(n = 100, mean = 10, sd = 20)
+
+mymatrix <- matrix(data = mydata, nrow = 20, ncol = 5)
+
+mymatrix
+
+```
+
+### Creating charts from data frame and matrix objects
+
+Making charts from data frames and matrix objects is really similar to what we did above.
+Here are some examples.
+
+```{r,plots1,fig.height=8,fig.width=8}
+
+# histogram of cylinders
+data(mtcars)
+hist(mtcars$cyl,xlab="number of cylinders", main="number of cylinders in mtcars data")
+
+# boxplot of qsec values for Toyota and Mercedes
+toyota <- mtcars[grep("Toyota",rownames(mtcars)),]
+merc <- mtcars[grep("Merc",rownames(mtcars)),]
+boxplot(toyota$qsec, merc$qsec,
+        ylab="quarter mile time in seconds",
+        main="mtcars",
+        names = c("Toyota","Mercedes"))
+
+# scatterplot of petal length vs sepal length for setosa irises
+# include a trend line using the lm function
+setosa <- subset(iris,Species=="setosa")
+head(setosa)
+mylm <- lm(setosa$Sepal.Length ~ setosa$Petal.Length)
+plot(setosa$Petal.Length,setosa$Sepal.Length,
+     xlab="Petal length (cm)",
+     ylab="Sepal length (cm)",
+     main="Setosa petal and sepal length",
+     pch=19)
+abline(mylm,col="red",lwd=2,lty=2)
+
+# a pairs plot is a special type of scatterplot
+pairs(mymatrix)
+
+# lets make a line diagram of freeny revenues
+# first need to normalise each column to the initial value
+head(freeny.x)
+freeny_norm <-t( t(freeny.x) / freeny.x[1,] )
+head(freeny_norm)
+
+plot(freeny_norm[,1], type="b", ylim=c(0.9,1.12), col="blue",
+     xlab="Quarters beginning 1962 Q2",
+     ylab="Change in values overtime")
+  lines(freeny_norm[,2], type="b", col="red")
+  lines(freeny_norm[,3], type="b", col="black")
+  lines(freeny_norm[,4], type="b", col="darkgreen")
+legend("topleft", legend = colnames(freeny.x), lty=1 , col = c("blue","red", "black", "darkgreen"))
+
+```
+
+In R, sometimes we need to load a particular package in order to make a special type of chart.
+In the example below we are making a heatmap, where the colour indicates the numerical value.
+
+```{r,heatmaps,fig.height=8,fig.width=8  }
+
+library("gplots")
+heatmap.2(mymatrix,trace="none",scale="none",main="heatmap")
+heatmap.2(cor(mymatrix),trace="none",scale="none", main="correlation")
+
+```
+
+This is also a good time to let you know that you can save R charts as files.
+There are different types of file formats, but PNG and PDF are the most used types.
+You will see these new files appear in your files menu.
+
+```{r,output_plots}
+
+pdf("myplot.pdf")
+plot(1:10)
+dev.off()
+
+png("myplot.png")
+plot(1:10)
+dev.off()
+
+```
+
+### Part 2: Homework questions for group study
+
+1. Create a scatterplot of mtcars weight (x axis) versus mpg (y axis). 
+Include x and y axis labels and a main heading.
+
+2. Sort mtcars by weight (wt) and create a horizontal barplot of wt values so heaviest ones at shown at the top of the bar plot.
+The plot should be labeled so it is clear to see which bar belong to which car.
+Include an axis label and main title.
+
+3. Create a box plot of iris petal lengths.
+Each species should be a different category.
+Chart needs axis labels and a main title.
+
+## Intro to R part 3
+
+### Dealing with read data
+
+So far we have been working with datasets that are built into R, but in the real world you will be working with data files.
+These could be in different formats like text (.txt), comma separated values (.csv), tab separated values (.tsv) and perhaps Excel files too (.xls and .xlsx).
+
+We will be working with TSV file of pipetting measurements.
+URL: https://raw.githubusercontent.com/markziemann/bioinformatics_intro_workshop/refs/heads/main/data/my.tsv
+
+We will use the `read.table()` command and show you some really important options.
+
+```{r,tsv}
+
+URL="https://raw.githubusercontent.com/markziemann/bioinformatics_intro_workshop/refs/heads/main/data/my.tsv"
+
+download.file(URL,"my.tsv")
+# look closely at the structure of pip
+# can you see what is wrong?
+pip <- read.table("my.tsv")
+pip
+str(pip)
+
+# try again
+pip <- read.table(URL,stringsAsFactors = FALSE)
+pip
+str(pip)
+
+# try again
+# looking better
+pip <- read.table(URL,stringsAsFactors = FALSE, header=TRUE)
+pip
+str(pip)
+
+# got it now
+pip <- read.table(URL,stringsAsFactors = FALSE, header=TRUE, row.names=1)
+pip
+str(pip)
+
+```
+
+Now let's try a csv file containing some travel records.
+
+```{r,readcsv}
+
+URL="https://people.sc.fsu.edu/~jburkardt/data/csv/airtravel.csv"
+
+trav <- read.table(URL,sep=",")
+trav
+str(trav)
+
+trav <- read.table(URL,sep=",",header=TRUE)
+trav
+str(trav)
+
+trav <- read.csv(URL)
+trav
+str(trav)
+
+```
+
+Now let's try a Microsoft Excel file.
+
+```{r,readxl}
+
+URL="https://raw.githubusercontent.com/markziemann/bioinformatics_intro_workshop/refs/heads/main/data/file_example_XLS_10.xls"
+NAME="file_example_XLS_10.xls"
+download.file(URL,destfile=NAME)
+library("readxl")
+
+mydata <- read_xls(NAME)
+mydata
+str(mydata)
+
+```
+
+### Save and load session and single datasets
+
+When working in R, it is convenient to save the session with `save.image()`.
+This results in an Rdata file which contains all the data objects in your current environment.
+To test that it's actually working, clear your environment with the sweep/broom icon and then load the Rdata file with `load()`.
+
+```{r,save1}
+
+save.image("mysession.Rdata")
+
+rm(list=ls())
+
+load("mysession.Rdata")
+
+```
+
+That is really cool, but sometimes we want to save individual objects, such as a large dataframe as Rdata files.
+
+```{r,save2}
+
+saveRDS(object = mymatrix , file = "mymatrix.Rds")
+
+rm(list=ls())
+
+x <- readRDS("mymatrix.Rds")
+
+head(x)
+
+```
+
+### Part 3: Check your skills
+
+For the TSV file located here: https://raw.githubusercontent.com/markziemann/bioinformatics_intro_workshop/refs/heads/main/data/mydata.tsv
+
+1. Read it in and show the first 6 rows of data.
+
+2. Calculate the column and row means.
+
+3. Use the `cor()` command to find the correlation coefficients between the 3 data sets. Which two datasets are the most similar?
+
+4. Make a pairs plot of the three datasets.
+
+5. Save the script. Clear the environment and execute it to confirm that it is working.
+
+## Session information
+
+For reproducibility.
+
+```{r,sessioninfo}
+
+sessionInfo()
+
+```
 

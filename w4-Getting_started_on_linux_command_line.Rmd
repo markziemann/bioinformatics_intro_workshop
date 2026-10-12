@@ -1,0 +1,697 @@
+---
+title: "Bioinformatics data skills workshop - Session 1: getting started on the Linux command line"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: simplex
+    toc: true
+    code_folding: hide
+    fig_width: 7
+    fig_height: 7
+    toc_float:
+      collapsed: true
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+![Image credit: Steven Lokwan.](images/Header-Image-crop-1024x559.jpg)
+
+# Welcome
+
+## Goals
+
+The goals of this workshop series are to:
+
+* Help Burnet researchers become more confident in conducting bioinformatics analysis and other
+big data tasks.
+
+* To familiarise interested researchers with Burnet's high performance computing (HPC)
+infrastructure.
+
+* To grow and strengthen Burnet's data analytics capabilities and community.
+
+* To establish recommended best practices, which bioinformatics researchers can use to make
+their work more reproducible and rigorous.
+
+## Outline
+
+1. Getting started on the Linux command line
+
+2. Key concepts of data and code management
+
+3. Introduction to R data structures and visualisation
+
+4. Mastering R Studio with R Markdown reports and version control
+
+5. Intermediate R - functions, vectorization, parallel programming
+
+6. Hands on omics analysis reports with R Markdown
+
+7. Containers for reproducible bioinformatics
+
+8. Introduction to Slurm for high performance computing
+
+9. SnakeMake and Targets for workflow management
+
+10. Machine learning in R with caret
+
+11. Automated natural language processing with Ollama, OpenAI and Anthropic LLMs
+
+12. Streamlined proteomics analysis using FragPipe
+
+## Knowing your keyboard
+
+We use lots of special characters, so here is the vocabulary that we will use.
+
+* ! exclamation (bang)
+
+* @ at symbol
+
+* \# hash
+
+* $ dollar
+
+* % percent
+
+* ^ hat
+
+* & ampersand
+
+* \* asterix, star
+
+* ~ tilda
+
+* \- dash
+
+* \+ plus
+
+* () brackets, parentheses, round brackets
+
+* [] square brackets
+
+* {} curly brackets, braces
+
+* <> angled brackets
+
+* / slash
+
+* \\ backslash
+
+* \| pipe
+
+* "" double quotes
+
+* '' single quotes
+
+* _ underscore
+
+* ` tick
+
+* . dot
+
+* , comma
+
+* : colon
+
+* ; semicolon
+
+* ? question mark
+
+## What is Unix/Linux?
+
+Unix is an operating system developed by Bell Labs designed for other software developers.
+Initial release in 1971.
+
+![Image credit: BlockZeta via YouTube: https://www.youtube.com/watch?v=DXh2_CTJW9w](images/maxresdefault.jpg)
+
+There are many derivations of Unix including Mac OS, BSD, Solaris, Linux, etc.
+Most web servers and research computing clusters use Unix (like 90%), so the Unix environment
+is essential for companies to keep their web sites and applications running and researchers
+to process their large data sets.
+
+In this workshop we will be using Ubuntu Linux, which is one of the more popular OSs used in
+bioinformatics.
+It has a large and well maintained package management system, large userbase and is used on
+both servers and desktop systems.
+
+![Image credit: Suparna Ganguly](images/distros.jpeg)
+
+The command line interface of Unix systems is called a "shell" because it is the outermost
+layer around the operating system.
+In Unix, there are a variety of shells (command interpreters), but the most used one on Linux
+is Bash, the "Bourne again shell".
+Shell scripts are lists of commands interpreted and run by the OS.
+It is important to know that due to the subtly different behaviour of shells across OSs,
+that shell scripts are not very portable.
+That is, a script written for Mac OS, is unlikely to work the same on Ubuntu, or Solaris.
+
+A Bash script contains commands that are "built-in" to Bash, as well as other commands that
+are installed elsewhere on the OS.
+This enables Bash to utilise a great variety of external tools for scientific computing and
+act as a type of "glue" to run complex workflows.
+
+## Setting up your command line environment
+
+You will need access to a Linux (Ubuntu) command line interface for this workshop series.
+My recommendation is that we work on Burnet's shared computing cluster (HPC).
+The benefit of this is that those systems are administered by dedicated HPC staff, so they can
+help you resolve issues that you might encounter.
+Follow the instructions [here](http://burnethpcdocs.domain.internal.burnet.edu.au/getting-started)
+to request access.
+Due to the strict network security settings at Burnet, secure shell (SSH) is blocked by
+default.
+You will need to apply for SSH access, which can be requested at the [IT Helpdesk](https://helpdesk.burnet.edu.au/).
+Mention in your ticket that you would like access to the HPC cluster from your laptop and desktop.
+I'd also recommend requesting VPN access so you can access the HPC while offsite.
+If you are stuck with any of these steps, please get in touch with Mark (mark.ziemann@burnet.edu.au),
+and he will help move things along.
+Hopefully, you will have everything sorted by the first session, but don't worry if it isn't
+finalised, as we have a fall-back solution.
+
+If you are using a Windows PC, you can use the built-in SSH client to log in to the HPC
+(see the [guide](https://learn.microsoft.com/en-us/windows/terminal/tutorials/ssh)).
+
+If you are using a Mac, you can search for the "Console" among your apps.
+
+If you are using a Linux PC, search for the "Terminal" among your apps.
+
+In your window, use the following command to log into the Burnet HPC replacing your username.
+
+```
+ssh -Y john.smith@burnethpc.domain.internal.burnet.edu.au
+```
+
+This will only work if you are connected to the Burnet network on site, or via the VPN.
+You will be asked for your HPC password.
+
+# Gentle introduction to the Linux command line
+
+## The command prompt
+
+Once logged in you will be greeted with an active cursor, where you can start entering
+commands.
+
+```
+john.smith@bnt-hpchn-01:~$
+
+```
+
+Let's discuss the parts of this command prompt.
+
+Typically Unix commands have the following syntax:
+
+```
+<mycommand> <option1> <option2> <optionN> <myobject>
+```
+
+The first word is the command itself and the last word is the input, and in between them you
+will find the options.
+Options are optional, and some commands don't even require an input.
+Unlike a lot of other programming languages, the whitespaces in bash are very important.
+
+## Your first shell commands
+
+Let's start with a simple print message:
+
+```
+echo "Hello world!"
+
+```
+
+Now try `echo -n "Hello world"` , do you notice the difference.
+
+Now that you have run a few commands, tell me what the up and down arrows do?
+
+What do the home and end buttons do?
+
+Like other programming languages, bash also has the ability to store values.
+Try the following commands to grasp how bash can do integer arithmetic and
+parameter expansion.
+
+```
+a=123
+b=456
+echo $a$b
+echo ${a}${b}
+echo {1..6} {A..K}
+echo {1..6}{A..K}
+echo $((a+b))
+echo $((a*b))
+echo $((a-b))
+echo $((a/b))
+echo $((a+1))
+((a++))
+echo $a
+
+```
+
+You can see from the above example that bash is limited to integer arithmetic with its
+built in tools.
+If you need to do more complicated calculations, you can use `awk`.
+
+```
+awk "BEGIN{print $a / $b}"
+awk "BEGIN{print $a + $b}"
+awk "BEGIN{print $a * $b}"
+
+```
+
+## Quotes
+
+Misuse of quotes is one of the main sources of errors and frustration in shell scripts.
+Let's go through some examples to see why this is so important.
+
+```
+echo $a "$a" '$a'
+
+```
+
+You see that the single quotes prevents the variable to be interpreted literally, while
+double quotes allow the variable interpretation before executing echo.
+Compare these two:
+
+```
+awk "BEGIN{print $a / $b}"
+awk 'BEGIN{print $a / $b}'
+
+```
+
+You can see that the single quotes block variable substitution.
+
+## Nested commands
+
+Nesting commands allows us to complete complex tasks in a few lines of code.
+You can put a command inside dollar brackets `$()` and it will be executed before the
+main command.
+
+```
+d=$( awk "BEGIN{print $a / $b}" )
+
+echo $d
+
+```
+
+## Pipes
+
+Another way to write the above calculation is to output the variables with `echo` and direct
+the output to AWK using the pipe operator `|`.
+
+```
+echo $a $b | awk ‘{print $1 / $2}'
+
+```
+
+Generally speaking, pipes are better than nested commands as the resulting code is more
+readable and modifiable.
+
+## Output and input redirection
+
+If we wanted to save the results to a file, we add this symbol '>'
+
+```
+echo $a $b | awk '{print $1 / $2}' > math_result.txt
+
+```
+
+If we want to append more data to the file we can use this symbol '>>'
+
+```
+echo $a $b | awk '{print $1 * $2}' >> math_result.txt
+
+```
+
+Be mindful that '>' totally overwrites a file without a prompt, so be very careful when using.
+
+## Essential Unix commands
+
+As a class, complete the following table describing important commands.
+
+| Command | What does it do? | Reproducible example with options|
+| --- | --- | --- |
+| echo | prints out a line of text | `echo "Hello, world!" ` |
+| pwd |     |     |
+| cd |     |     |
+| ls |     |     |
+| man |     |     |
+| mkdir |     |     |
+| cat  |     |     |
+| head, tail |     |     |
+| less, more |     |     |
+| nano |     |     |
+| cp |     |     |
+| mv |     |     |
+| rm |     |     |
+| history |     |     |
+| wc |     |     |
+| cut |     |     |
+| awk |     |     |
+| grep |     |     |
+| sed |     |     |
+| paste |     |     |
+| sort |     |     |
+| tr |     |     |
+| top |     |     |
+| free |     |     |
+| df |     |     |
+
+Here is a list of further powerful commands.
+Your homework is to write a 1-sentence description of what they do.
+Provide a reproducible example for **one** of these commands.
+
+* rmdir
+
+* scp
+
+* which, locate
+
+* who, whoami
+
+* time
+
+* date
+
+* du
+
+* watch
+
+* sleep
+
+* gzip
+
+* tar
+
+* zip
+
+* uniq
+
+* find
+
+* join
+
+* md5sum
+
+* wget, curl
+
+* screen, tmux
+
+* nl
+
+* ln
+
+* rev, tac
+
+* diff, comm
+
+* numsum, numaverage
+
+* git
+
+* dig
+
+* column
+
+* seq
+
+## Navigating your home directory
+
+As an exercise, follow the steps:
+
+1. Create a directory called bioinfo_workshop and `cd` into it.
+
+2. Then create a new directory called "session01" and `cd` into that.
+
+3. Use `nano` to create a text file called mytestfile.txt and put a few lines of text
+in it.
+
+4. Try the following commands on the file:
+  * cat
+  * less
+  * wc
+  * sort
+  * cp (copy the file to another name, like mytestfile2.txt)
+  * mv (move the file or change the name)
+  * rm (remove the duplicate file)
+  * sort
+  * du
+
+5. Then use `cd ..` or `cd ~` to return to your home directory.
+
+6. Navigate again to the "session01" directory, but use autocomplete with the `cd` command
+For example, from the home directory, type "cd bio" and then hit the tab key, it should
+autocomplete the rest of the long name, saving you time and being more precise.
+
+## Writing your first script
+
+Now it is time to write your first script.
+Use `nano` to create a new text document.
+At the top of the file, type `#!/bin/bash` and on the second line, write the "hello world"
+example.
+Save the file with a name like `myfirstscript.sh` and close nano.
+
+Mark the file as executable using `chmod +x myfirstscript.sh` and then execute it with the
+following command
+
+```
+./myfirstscript.sh
+
+```
+
+Alternatively, use this syntax:
+
+```
+bash myfirstscript.sh
+
+```
+
+You should see the correct output of "hello world".
+
+In the next 20 minutes, work with the person next to you to write a new script that finds
+the mean value of five `$RANDOM` calls.
+Use google and stack overflow to help.
+If you get totally stuck, ask a teaching assistant for a hint.
+
+When naming the script, don't use any spaces or special characters and make sure it has `.sh`
+at the end.
+
+Once completed, discuss your solution and results with the groups around you.
+
+## Useful Unix operators: loops and if statements
+
+The `for` loop is super useful for repeating a routine over a lot of different inputs,
+such as input files.
+
+Try the following commands on the prompt:
+
+```
+for letter in A B C ; do echo $letter ; done
+
+for i in {1..4} ; do echo "loop $i" ; done
+
+for j in {A..K} ; do echo "letter $j" ; done
+
+for i in $(seq 1 2 10) ; do echo $i ; done
+
+```
+
+When you write for loops in a script file, it is best to break it up over multiple lines
+like this:
+
+```
+for i in $(seq 1 2 10) ; do
+  echo $i
+done
+
+```
+
+This also allows you to write more complicated workflows with multiple commands.
+You can also store variables in the loop commands.
+
+Consider the following command, which is trying to count the number of characters in
+each word and output the results.
+
+```
+for WORD in book laptop hat ; do LEN=$(echo $WORD | wc -c) ; echo $WORD $LEN ; done
+
+```
+
+Do you notice any strange behaviour?
+
+How could we remedy that?
+
+If statements are also really important, as we can get the computer to make simple decisions
+based on inputs.
+For example, we may want to execute a long computationally intensive pipeline, but only if
+the output hasn't already been generated.
+We typically combine the if statement with a `test` command.
+The test command is special because it can also be represented by square brackets.
+Take a few minutes to read `man test` and see what types of tests can be done.
+
+```
+if [ ! -r output.txt ] ; then echo "Output not present!" ; fi
+
+```
+
+In a script, it is normally written like this:
+
+```
+if [ ! -r output.txt ] ; then
+  echo "Output not present!"
+fi
+```
+
+We can add an `else` operator to deal with the alternative possibilities.
+
+```
+if [ -r output.txt ] ; then echo "Output is present!" ; else echo "Output not present" ; fi
+
+echo "Result=1234567" > output.txt
+
+if [ -r output.txt ] ; then echo "Output is present!" ; else echo "Output not present" ; fi
+
+```
+
+In a script, if/else commands are normally written like this:
+
+```
+if [ -r output.txt ] ; then
+  echo "Output is present!"
+else
+  echo "Output not present"
+fi
+```
+
+Your other homework exercise is to write a new script that combines if statements and for
+loops.
+For example, you can use a for loop to generate and save a value of $RANDOM, then use an if
+statement to check whether it is larger than an arbitrary value like 20,000.
+
+# A practical example with NCBI BLAST
+
+Now that we have done some introductory things, let's do some actual bioinformatics using
+the classic BLAST tool.
+
+<img src="images/BlastLogo.png" alt="drawing" width="300"/>
+
+We will begin by downloading the full *E. coli* genome, uncompressing the file and creating
+a BLAST index.
+
+```
+wget -N --no-check-certificate "https://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/dna/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz"
+
+gunzip -kf Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz
+
+makeblastdb -dbtype nucl -in Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa -input_type fasta -parse_seqids -title ecoli
+
+```
+
+Now that we have set up the DB, we will need a sequence to query.
+
+We will download the full set of *E. coli* coding sequences and select a few for running a
+BLAST.
+
+```
+wget -N --no-check-certificate "https://ftp.ensemblgenomes.org/pub/bacteria/release-42/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/cds/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz"
+
+gunzip -kf Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa.gz
+
+```
+
+We need to "unwrap" the fasta file.
+No I'm not expecting you to understand the perl command.
+
+```
+perl -pe '/^>/ ? print "\n" : chomp' \
+Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.fa \
+> Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.unwrap.fa
+
+```
+
+Use `head` to visualise the contents of the unwrapped fasta file.
+
+Then sample the first 5 sequences to another file called `sample.fa`
+
+```
+sed 1d Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.cds.all.unwrap.fa \
+| head > sample.fa
+
+```
+
+Now perform a BLASTN search.
+
+```
+blastn -evalue 0.001 \
+-db Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa \
+-query sample.fa
+
+```
+
+That's a lot of output.
+It is a good idea to save the results into a file and view it using `less`.
+
+The output is still very extensive.
+It would be convenient to obtain the results in the form of a summary table.
+
+```
+blastn -evalue 0.001 \
+-db Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa \
+-query sample.fa \
+-outfmt 6
+
+```
+
+That's great, but what are column names?
+
+Here's the [answer](https://www.metagenomics.wiki/tools/blast/blastn-output-format-6).
+
+`qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore`
+
+1.  qseqid      query or source (gene) sequence id
+
+2.  sseqid      subject or target (reference genome) sequence id
+
+3.  pident      percentage of identical positions
+
+4.  length      alignment length (sequence overlap)
+
+5.  mismatch    number of mismatches
+
+6.  gapopen     number of gap openings
+
+7.  qstart      start of alignment in query
+
+8.  qend        end of alignment in query
+
+9.  sstart      start of alignment in subject
+
+10.  send        end of alignment in subject
+
+11.  evalue      expect value
+
+12.  bitscore    bit score
+
+Can you interpret what the results mean?
+
+# Further exercise: determine the limits of BLASTN
+
+Point mutations (base substitutions) make it more difficult for BLAST to find the sequence in
+the genome.
+
+Point mutations can be simulated computationally using the `msbar` command of the `emboss`
+suite of tools.
+
+```
+msbar -sequence mysequence.fa -count 20 -point 4 -block 0 -codon 0 \
+-outseq /dev/stdout 2>/dev/null > mysequence_mutated.fa
+
+```
+
+Using your new found shell scripting skills, find out how many point mutations are required to
+stop BLAST from identifying the source gene AAC73113 in the genomic database.
+
+Express the answer as a proportion of the length of the AAC73113 gene.
+As the point mutations are random, you might need to repeat the sequence mutation and search
+many times.
+
+Warning: this is a surprisingly tricky task to do. We recommend working in groups.
+
