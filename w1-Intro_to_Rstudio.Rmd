@@ -104,7 +104,7 @@ These are available on demand and available on GitHub [here](https://github.com/
 # Introduction to R studio
 
 For this introductory session, I suggest you run RStudio on your own laptop.
-For serious research work, I suggest using dedicated servers or workstations.
+For serious research work, I recommend using dedicated servers or workstations.
 Later in this workshop series we will learn how to launch RStudio sessions on
 Burnet's high performance computing systems.
 
@@ -119,6 +119,9 @@ Install R on your computer:
 * [Linux (Debian, Ubuntu, etc)](https://cran.r-project.org/bin/linux/ubuntu/fullREADME.html)
 
 A recent version of Rstudio like 2026.09.0-174 from [Posit](https://docs.posit.co/ide/user/).
+
+If your laptop doesn't have R and Rstudio installed, don't worry, I can give you temporary access to
+an Rstudio cloud server.
 
 ## What is R and why use it?
 
@@ -206,11 +209,17 @@ or
 cd ~/username/Documents/BioinfoWorkshop
 ```
 
+Now create a new R script file using the "File" drop down menu, then save it immediately to the same working directory with a name like "workshop1.R".
+
+Now that we understand the locations of the different RStudio features we can start to use it!
+
+## Intro to R part 1
+
 ### Arithmetic
 
-io and try these commands by typing in the script panel and hitting the “Run” button or Ctrl+Enter, observing the output.
-
 We'll start with some arithmetic.
+
+In your script, type the following commands and hit “Run” button or Ctrl+Enter, observing the output.
 
 ```{r,math1}
 
@@ -224,7 +233,8 @@ Notice that as you start typing commands like `sqrt` that Rstudio will give you 
 
 ### Working with variables
 
-Use the `<-` back arrow or `=` to define variables.
+Use the `<-` back arrow to define variables.
+Sometimes you will also see `=` used, but that is discouraged.
 
 ```{r,math2}
 
@@ -1078,7 +1088,7 @@ Chart needs axis labels and a main title.
 
 ## Intro to R part 3
 
-### Dealing with read data
+### Reading data from files
 
 So far we have been working with datasets that are built into R, but in the real world you will be working with data files.
 These could be in different formats like text (.txt), comma separated values (.csv), tab separated values (.tsv) and perhaps Excel files too (.xls and .xlsx).
