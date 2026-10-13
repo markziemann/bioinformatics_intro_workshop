@@ -1,5 +1,5 @@
 ---
-title: "Bioinformatics data skills workshop - Session 3: Introduction to R data structures and visualisation"
+title: "Workshop 1: Introduction to RStudio"
 author: "Burnet Bioinformatics Group"
 date: "`r Sys.Date()`"
 output:
@@ -17,11 +17,113 @@ Source: https://github.com/markziemann/bioinformatics_intro_workshop
 
 ![Image credit: Steven Lokwan.](images/Header-Image-crop-1024x559.jpg)
 
+# Foreword
+
+## Goals
+
+The goals of this workshop series are to:
+
+* To grow and strengthen Burnet’s data analytics capabilities and community.
+
+* Help Burnet researchers become more confident in conducting bioinformatics analysis and other big data tasks.
+
+* To familiarise interested researchers with Burnet’s high performance computing (HPC) infrastructure.
+
+* To establish recommended best practices.
+
+## Discontinued sessions from 2025
+
+These are available on demand and available on GitHub [here](https://github.com/markziemann/bioinformatics_intro_workshop/tree/2025).
+
+* Containers for reproducible bioinformatics
+
+* SnakeMake and Targets for workflow management
+
+* Machine learning in R with caret
+
+* Automated natural language processing with Ollama, OpenAI and Anthropic LLMs
+
+* Streamlined proteomics analysis using FragPipe
+
+## Getting to know your special characters
+
+* `!` exclamation mark
+
+* `@` at symbol
+
+* `#` hash
+
+* `$` dollar
+
+* `%` percent
+
+* `^` hat
+
+* `&` ampersand
+
+* `*` asterix, star
+
+* `~` tilda
+
+* `-` dash
+
+* `+` plus
+
+* `()` brackets, parentheses, round brackets
+
+* `[]` square brackets
+
+* `{}` curly brackets, braces
+
+* `<>` angled brackets
+
+* `/` slash
+
+* `\` backslash
+
+* `|` pipe
+
+* `""` double quotes
+
+* `''` single quotes
+
+* `_` underscore
+
+* ` tick
+
+* `.` dot
+
+* `,` comma
+
+* `:` colon
+
+* `;` semicolon
+
+* `?` question mark
+
+# Introduction to R studio
+
+For this introductory session, I suggest you run RStudio on your own laptop.
+For serious research work, I suggest using dedicated servers or workstations.
+Later in this workshop series we will learn how to launch RStudio sessions on
+Burnet's high performance computing systems.
+
+## Prerequisite for this session
+
+Install R on your computer:
+
+* [Windows](https://cran.r-project.org/bin/windows/base/)
+
+* [MacOS](https://cran.r-project.org/bin/macosx/)
+
+* [Linux (Debian, Ubuntu, etc)](https://cran.r-project.org/bin/linux/ubuntu/fullREADME.html)
+
+A recent version of Rstudio like 2026.09.0-174 from [Posit](https://docs.posit.co/ide/user/).
+
 ## What is R and why use it?
 
 A statistical computing and data visualisation language, derived from an earlier
 language called S.
-
 
 ## What a typical workflow looks like
 
@@ -43,99 +145,70 @@ language called S.
 
 This week, our goal is to learn:
 
-* how to work with R on the command line and in RStudio on the HPC
+* Familiarise with the RStudio interface
 
 * about different data structures in R
 
-* how to do basic math in R
+* how to do basic stats in R
 
-## Setting up an interactive R session on the HPC
+* how to do basic charts in R
 
-If you are connected to the Burnet network, visit the HPC documentation [here](http://burnethpcdocs.domain.internal.burnet.edu.au/getting-started).
+* write a simple script
 
-Create a new tmux session which will be persistent.
-Then make an interactive SLURM session where you can run some analysis.
-You can customise the threads, memory and time to your needs.
+# Intro to the R Studio interface
 
-```
-tmux new -s mysession
+RStudio is an integrated developer environment (IDE). Lets familiarise ourselved with the panels and tabs.
+Here are the key panels you need to know about.
 
-srun -p interactive --pty --time=180 --threads=2 --mem=8G bash -i
-```
+* Console, terminal
 
-Then run an example command.
-Here we are grabbing some random data and compressing it with pigz, which is a
-parallel compression tool.
-This will use all available CPU threads.
+* Environment, history, (git)
 
-```
-head -1000 /dev/random | pigz -p2 > /dev/null
-```
+* Files, plots, help
 
-If you want to run some scripts, you will likely need to load modules.
-This is a good way to maintain parallel version of languages like R.
-Use the following commands to show the available modules.
+* Text, script editor
+
+Now lets take a look at the drop-down menu.
+
+## Understanding where we are
+
+When we open Rstudio, the "location" of the R console, terminal and files menu might be different.
+
+We should decide where we want to work. On a Windows computer you might want to create the following path and navigate to it.
 
 ```
-module avail
-
-module spider
+C:\Users\<YourUsername>\Documents\BioinfoWorkshop\
 ```
 
-Try loading R version 4.3.2.
+On Mac the path might look like this:
 
 ```
-module load R/4.3.2
+/Users/username/Documents/BioinfoWorkshop
 ```
 
-Now run R and check the version and exit.
+And on linux/unix it might look like this:
 
 ```
-R
-sessionInfo()
-q()
+/home/username/Documents/BioinfoWorkshop
 ```
 
-Exit interactive sessions with `exit`.
+In the R console use the command `getwd()` to see what the current path is.
+Create the working directory in the Documents folder using whatever method you like.
+Then use `setwd()` command to tell R to set the working directory to the BioinfoWorkshop directory.
 
-Non interactive jobs can be scheduled using SLURM, using the [HPC docs](http://burnethpcdocs.domain.internal.burnet.edu.au/slurm) as a guide.
-
-## RStudio session
-
-Rstudio offers some benefits due to its interactive and graphical nature.
+In the terminal you can use the `cd` command to set the working directory:
 
 ```
-sbatch --time=180 --threads=2 --mem=8G  /software/jobs/rstudio_4.4.job
+cd C:\Users\<YourUsername>\Documents\BioinfoWorkshop\
 ```
-
-It will say "Submitted batch job 1234" (the number will be different),
-and will create a file in the current working directory called rstudio.job.1234.
-List the contents with `ls` to confirm that the file was created,
-then type `cat rstudio.job.1234` to read the instructions to connect.
-
-Let's get to know the Rstudio interface a bit better.
-It consists of a menu bar at the top of the browser window and four panels below:
-
-| Menu Bar |
-|:----:|:----:|
-| Top left: Script (type and save your scripts here)   | Top right: Global Environment (R data objects you can work with) |
-| Bottom left: Console (commands are executed here)  |  Bottom right: Files, Plots and help pages  |
-
-If you cannot see the Script panel, click "New Script" on the menu bar and it should appear.
-
-Let’s watch a video together to learn the basics of the Rstudio environment.
-
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=5YmcEYTSN7k
-" target="_blank"><img src="http://img.youtube.com/vi/5YmcEYTSN7k/0.jpg"
-alt="IMAGE ALT TEXT HERE" width="480" height="360" border="10" /></a>
-
-## Intro to R part 1
-
-Here we will begin with simpler data structures and commands.
+or
+```
+cd ~/username/Documents/BioinfoWorkshop
+```
 
 ### Arithmetic
 
-Open up your Rstudio and try these commands by typing in the script panel and hitting the “Run” button or Ctrl+Enter, observing the output.
+io and try these commands by typing in the script panel and hitting the “Run” button or Ctrl+Enter, observing the output.
 
 We'll start with some arithmetic.
 
