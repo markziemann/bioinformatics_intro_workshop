@@ -7,30 +7,33 @@ The objective is to learn more about bioinformatics skills.
 
 ## Structure
 
-So far we have plans for eight workshops.
-The first four cover foundational basics for beginners and the next four get
-into the more intermediate topics that enhance research practices.
+So far we have plans for 12 workshops over 6 weeks.
+The first three cover fundamental competencies in R/Rstudio.
+The following three include key topics on working on linux systems which is common for scientific computing.
 
-1. Getting started on the Linux command line
+From session seven onwards, we are focusing on various specific skill sets that are either directly relevant to
+work that is done at Burnet, or offer interesting capabilities that could open up new analytical directions.
 
-2. Data and code management
+1. Introduction to R Studio
 
-3. An introduction to R data structures and visualisation
+2. Omics analysis reports with R Markdown
 
-4. Mastering Rstudio with R Markdown reports and version control
+3. Intermediate R – functions and vectorization
 
-5. Intermediate R - functions, vectorization, parallel programming
+4. Getting started on the Linux command line
 
-6. Hands on omics analysis reports with R Markdown
+5. Data management and source control
 
-7. Containers for reproducible bioinformatics
+6. High performance computing with Slurm
 
-8. Introduction to Slurm for high performance computing
+7. Robust pathway enrichment analysis in R
 
-9. Introduction to workflow management systems
+8. Introduction to multi-omics analysis in R
 
-10. Machine learning in R with caret
+9. Pathogen sequence analysis and variant calling
 
-11. Automated natural language processing with Ollama, OpenAI and Anthropic LLMs
+10. Introduction to data analysis in Python
 
-12. Streamlined proteomics analysis using FragPipe
+11. Evolution and phylogenetics
+
+12. Generalized Additive Mixed Models for longitudinal analysis
