@@ -168,8 +168,11 @@ So the chunk header would look like this:
 Now it is your turn to give it a try.
 
 Create an Rmd document called "plantgrowth.Rmd" to analyse the built-in `PlantGrowth` dataset.
-The data contains measurements of control (ctrl) and treated (trt1, trt2) samples.
-In the Rmd you need to calculate the numerical mean, median and interquartile ranges of the three groups of samples, and plot these as a boxplot.
+In the "file" drop down menu create an R Markdown file.
+Type `PlantGrowth` to check the dataset format.
+It contains measurements of control (ctrl) and treated (trt1, trt2) samples.
+
+In the Rmd, calculate the mean, median and interquartile ranges of the three groups of samples, and plot these as a boxplot.
 Use the `head()` and `str()` commands to get a better idea of the structure of the dataset.
 
 Use plain text to explain the steps you are doing, and headings as appropriate.
@@ -187,6 +190,8 @@ which is available from NCBI GEO under accession number [GSE158420](https://www.
 
 The general goals of today’s session is to conduct the following:
 
+* Load the needed libraries.
+
 * Data import, checking and cleaning.
 
 * Basic quality control: count the number of reads per sample.
@@ -203,86 +208,291 @@ As you are growing the workflow, be sure to knit it regularly to ensure the part
 
 For best results, work in small groups of 2-3.
 
+### Load libraries
+
+```{r,libs}
+
+library("DESeq2") # differential expression
+library("kableExtra") # neat html tables
+library("gplots") # heatmap
+library("beeswarm") # beeswarm chart
+
+```
+
 ### Data import, checking and cleaning
 
-RNA-seq expression counts are available
-here is an alternative download link in the bioinfo_workshop folder [here](https://ziemann-lab.net/public/bioinfo_workshop/2026/).
+Cleaned RNA-seq expression counts are available
+[here](https://raw.githubusercontent.com/markziemann/bioinformatics_intro_workshop/refs/heads/2026/GSE158420_counts_fixed.tsv).
+
+Use `download.file()` to download it to your local directory.
+
+Then use `read.table()` to read it in.
+
+Then use `str()`, `head()` and `dim()` to see what the dataset table looks like and check the dimensions of the object.
+
+If there are ~60,000 genes annotated in the human genome, do you think this
+dataset has already undergone some filtering of lowly expressed genes?
+
+```{r,read_data}
+
+URL="https://raw.githubusercontent.com/markziemann/bioinformatics_intro_workshop/refs/heads/2026/GSE158420_counts_fixed.tsv"
+download.file(url=URL,destfile="GSE158420_counts_fixed.tsv")
+x <- read.table("GSE158420_counts_fixed.tsv")
+head(x)
+dim(x)
+
+```
 
 ## Basic quality control
 
 For RNA-seq, there are several types of QC that can be done.
 Let's just focus on quantifying the number of reads per sample.
+This can be calculated with the `colSums()` command.
 Present the data as a bargraph, using the `barplot()` or `ggplot2()` functions.
 
 The size of the chart can be adjusted using `fig.width` and `fig.height` options in
 the chunk header.
 
-Also check the number of genes that are included in this dataset.
-If there are ~60,000 genes annotated in the human genome, do you think this
-dataset has already undergone some filtering of lowly expressed genes?
-
 Does the dataset need any additional filtering of lowly expressed genes?
+
+```{r,qc,fig.height=9}
+
+colSums(x)
+sort(colSums(x))
+mycounts <- sort(colSums(x))
+barplot(mycounts,horiz=TRUE,las=1)
+barplot(mycounts,horiz=TRUE,las=1,cex.names=0.4,main="Reads per sample")
+
+hist(log10(rowMeans(x)))
+
+```
 
 ## Principal component / Multidimensional scaling analysis
 
-You can use the `princomp()` or `cmdscale()` functions.
-Here is an example with cmdscale, that saves an object called `mds` that has the
-coordinates of the first three dimensions.
+You can use the `cmdscale()` functions.
+Here are examples below, assuming the gene expression data is named `x`
+
+Initially, we can quantify the dimensions using `sd()`.
+
+When we plot the MDS, the first two dimensions are selected automatically,
+but that can be changed if desired.
+
+The closer the points are, the more correlated the datasets are.
+This can be used to demonstrate clustering between sample groups.
+
+```{r,mds}
+
+mds <- cmdscale(dist(t(scale(x))),k=6)
+head(mds)
+apply(mds, 2, sd)
+barplot(apply(mds, 2, sd), names.arg=1:6)
+plot(mds, col="gray", pch=19, cex=2, xlab="Dim 1", ylab="Dim 2", main="MDS plot")
+text(mds, labels=colnames(x))
 
 ```
-mds <- cmdscale(dist(t(scale(x))),k=3)
-pca <- princomp(x)
-plot(pca)
-biplot(pca)
-plot(pca$loadings[,1:3])
-text(pca$loadings[,1],pca$loadings[,2],labels=colnames(x))
+
+Alternatively `princomp()` can be used.
+
+## Statistical analysis of differential expression
+
+In this step we will conduct differential analysis.
+We will use DESeq2 because it has superior accuracy compared to other similar
+packages.
+Make yourself familiar with the [DESeq2 page on Bioconductor](https://bioconductor.org/packages/release/bioc/html/DESeq2.html).
+
+We need to set up a samplesheet (ss).
+We will need to set up a sample sheet that has the patient ID and whether the
+sample is normal or tumour.
+Normally this is provided by the clinical team.
+Here we will use column names to make our own.
+Make columns for the patient ID and tumor status.
+These are categorical data, so should be converted to factors.
+
+```{r,samplesheet}
+
+ss <- as.data.frame(colnames(x))
+rownames(ss) <- ss[,1]
+ss$patient <- factor(gsub("T","",gsub("N","",gsub("X","",ss[,1]))))
+ss$tumor <- factor(grepl("T",ss[,1]))
+ss[,1]=NULL
+head(ss)
 
 ```
 
-You could also use the `princomp()` package.
+The samplesheet should be included in the report in a nice kable table.
 
-Next, use `plot()` to plot the first two dimensions.
+```{r,sskable}
 
-Use `text()` to overlay the sample names.
+ss %>%
+  kbl(caption = "Sample sheet") %>%
+  kable_paper("hover", full_width = F)
 
-Now can you use different colours for tumor and normal tissues?
-The colours of each point can be provided as a vector in the `plot()` function.
-The vector needs to be the same length as the number of columns in the dataset.
+```
 
-Make another barplot that shows the magnitude of eigenvalues for the first 10
-dimensions.
+Here is a general workflow of how DESeq2 can be applied, which does a `paired`
+analysis.
+
+```{r,deseq2}
+
+dds <- DESeqDataSetFromMatrix(countData = x , colData=ss, design = ~ patient + tumor)
+res <- DESeq(dds)
+z <- results(res)
+vsd <- vst(dds, blind=FALSE)
+zz <- cbind(as.data.frame(z),assay(vsd))
+dge <- as.data.frame(zz[order(zz$pvalue),])
+dge[1:10,1:6]
+
+```
+
+To disregard the patient pairing, delete `patient +` from the `DESeqDataSetFromMatrix` command.
+You will notice that including sample pairing drastically improves statistical power.
+
+Once DESeq2 is done, count the number of genes with FDR<0.05 that are up- and
+down-regulated.
+The `subset()` function can be used for this.
+
+Make kable tables showing the top 20 up and down regulated genes as ranked by p-value.
+
+```{r,sig}
+
+nrow(subset(dge, padj<0.05 & log2FoldChange>0))
+
+nrow(subset(dge, padj<0.05 & log2FoldChange<0))
+
+subset(dge, padj<0.05 & log2FoldChange>0)[1:20,1:6] %>%
+  kbl(caption = "Top upregulated genes") %>%
+  kable_paper("hover", full_width = F)
+
+subset(dge, padj<0.05 & log2FoldChange<0)[1:20,1:6] %>%
+  kbl(caption = "Top downregulated genes") %>%
+  kable_paper("hover", full_width = F)
+
+```
 
 
+## Visualisation of key findings
 
+We are going to make four charts: MA plot, volcano plot, heatmap and gene boxplot.
 
+### MA plot
 
+Use `plot()` with log10(baseMean) on the x-axis and log2 fold change on the y-axis.
+Mark significant genes in a different colour.
+This can be achieved by first running `plot()` and then `points()`.
+The `points()` function adds additional data series to the plot.
+Bonus points for adding a subtitle that includes the number of genes in total,
+the number with FDR<0.05 that are up- and down-regulated respectively.
+The `mtext()` function can add a subheading.
 
+```{r,maplot}
 
+sig <- subset(dge, padj<0.05)
 
+plot(log10(dge$baseMean), dge$log2FoldChange,
+  pch=19, cex=0.7, col="gray",
+  main="Lung cancer gene expression",
+  xlab="log10(baseMean)",
+  ylab="log2(fold change)")
 
+points(log10(sig$baseMean),sig$log2FoldChange,pch=19,cex=0.7,col="darkorange")
 
+N_TOT <- nrow(dge)
+N_SIG <- nrow(sig)
+N_UP <- nrow(subset(sig, log2FoldChange>0))
+N_DN <- nrow(subset(sig, log2FoldChange<0))
+HEADER <- paste(N_SIG,"genes of",N_TOT, "@5% FDR, ",N_UP,"up, and",N_DN, "down")
+mtext(HEADER)
 
+```
 
+### Volcano plot
 
+Similar to the above, except that log2 fold change is on the
+x-axis and -log10 p-value is on the y-axis.
 
+```{r,volcano}
 
+plot(dge$log2FoldChange,-log10(dge$pvalue),
+  pch=19, cex=0.7, col="gray",
+  main="Lung cancer gene expression",
+  xlab="log2(fold change)",
+  ylab="-log10(p-value)")
 
+points(sig$log2FoldChange, -log10(sig$pvalue) , pch=19,cex=0.7,col="darkorange")
 
+mtext(HEADER)
 
+```
 
+### Heatmap
 
+Use the `heatmap.2` function of the `gplots()` CRAN package to make
+a heatmap with the top 50 genes.
 
+Here is an example of plotting Pearson correlation coefficient with the default
+red and yellow palette.
 
+```{r,corheat}
 
+heatmap.2(cor(x),trace="n",scale="none", main="Pearson correlation heatmap")
 
+```
 
+Now for showing the ctrl-tumor differences.
+First we make a blue, white and red palette which is popular.
+Then we create a library size normalised verison of the data, where
+intensities are shown in reads per million (rpm).
+Then we can make a heatmap of the top X DE genes with data from the rpm object.
 
+```{r,geneheat,fig.height=7,fig.width=7}
 
+colfunc <- colorRampPalette(c("blue", "white", "red"))
+rpm <- apply(x,2,function(x) { x/sum(x) * 1e6 } ) # reads per million normalisation
+colSums(rpm)
 
+NGENES=30
+topgenes <- head(rownames(dge),NGENES)
+topgeneindices <- which(rownames(rpm) %in% topgenes)
+topmx <- log10(rpm[topgeneindices,]+1)
+dim(topmx)
+head(topmx)
+
+heatmap.2( topmx, col=colfunc(25),
+  scale="row" , trace="none",
+  margins = c(6,10), cexRow=0.7, cexCol=0.7, main="Top genes")
+
+```
+
+Bonus points for using `ColSideColors` to specify which samples are tumour and
+which are normal.
+
+```{r,geneheat2,fig.height=7,fig.width=7}
+
+mycols <- as.character(as.numeric(ss$tumor))
+mycols <- gsub("1","lightgreen",mycols)
+mycols <- gsub("2","magenta",mycols)
+mycols
+
+heatmap.2( topmx, col=colfunc(25),
+  scale="row" , trace="none",
+  margins = c(6,10), cexRow=0.7, cexCol=0.7,
+  main="Top genes",
+  ColSideColors=mycols )
+
+mtext("green:ctrl, pink:tumor")
+
+```
+
+## Knit the final product
+
+This ensures your script runs from top to bottom and doesn't rely on objects previously saved in the memory.
+
+Hit the knit button.
 
 ## Session information
 
-For reproducibility.
+At the end of all reports, include `sessionInfo()` to print out the version R and all the libraries used.
+It helps with reproducibility.
 
 ```{r,sessioninfo}
 
