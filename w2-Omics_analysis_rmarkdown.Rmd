@@ -487,7 +487,7 @@ mtext("green:ctrl, pink:tumor")
 
 This ensures your script runs from top to bottom and doesn't rely on objects previously saved in the memory.
 
-Hit the knit button.
+Hit the knit button, or type `rmarkdown::render("myanalysis.Rmd")` to generate the html.
 
 ## Session information
 
