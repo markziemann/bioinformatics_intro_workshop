@@ -1,5 +1,5 @@
 ---
-title: "Bioinformatics data skills workshop - Session 1: getting started on the Linux command line"
+title: "Workshop 4: Getting started on the Linux command line"
 author: "Burnet Bioinformatics Group"
 date: "`r Sys.Date()`"
 output:
@@ -16,107 +16,6 @@ output:
 Source: https://github.com/markziemann/bioinformatics_intro_workshop
 
 ![Image credit: Steven Lokwan.](images/Header-Image-crop-1024x559.jpg)
-
-# Welcome
-
-## Goals
-
-The goals of this workshop series are to:
-
-* Help Burnet researchers become more confident in conducting bioinformatics analysis and other
-big data tasks.
-
-* To familiarise interested researchers with Burnet's high performance computing (HPC)
-infrastructure.
-
-* To grow and strengthen Burnet's data analytics capabilities and community.
-
-* To establish recommended best practices, which bioinformatics researchers can use to make
-their work more reproducible and rigorous.
-
-## Outline
-
-1. Getting started on the Linux command line
-
-2. Key concepts of data and code management
-
-3. Introduction to R data structures and visualisation
-
-4. Mastering R Studio with R Markdown reports and version control
-
-5. Intermediate R - functions, vectorization, parallel programming
-
-6. Hands on omics analysis reports with R Markdown
-
-7. Containers for reproducible bioinformatics
-
-8. Introduction to Slurm for high performance computing
-
-9. SnakeMake and Targets for workflow management
-
-10. Machine learning in R with caret
-
-11. Automated natural language processing with Ollama, OpenAI and Anthropic LLMs
-
-12. Streamlined proteomics analysis using FragPipe
-
-## Knowing your keyboard
-
-We use lots of special characters, so here is the vocabulary that we will use.
-
-* ! exclamation (bang)
-
-* @ at symbol
-
-* \# hash
-
-* $ dollar
-
-* % percent
-
-* ^ hat
-
-* & ampersand
-
-* \* asterix, star
-
-* ~ tilda
-
-* \- dash
-
-* \+ plus
-
-* () brackets, parentheses, round brackets
-
-* [] square brackets
-
-* {} curly brackets, braces
-
-* <> angled brackets
-
-* / slash
-
-* \\ backslash
-
-* \| pipe
-
-* "" double quotes
-
-* '' single quotes
-
-* _ underscore
-
-* ` tick
-
-* . dot
-
-* , comma
-
-* : colon
-
-* ; semicolon
-
-* ? question mark
 
 ## What is Unix/Linux?
 
