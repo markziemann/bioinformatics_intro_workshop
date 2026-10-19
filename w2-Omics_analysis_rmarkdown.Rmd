@@ -15,6 +15,23 @@ output:
 
 Source: https://github.com/markziemann/bioinformatics_intro_workshop
 
+## Note for today's session
+
+Packages `DESeq2`, `kableExtra`, `gplots` and `beeswarm` are required.
+
+Use the following commands to install them:
+
+```
+install.packages("gplots")
+install.packages("beeswarm")
+install.packages("kableExtra")
+
+install.packages("BiocManager")
+library("BiocManager")
+BiocManager::install("DESeq2")
+
+```
+
 ## Introduction to RMarkdown
 
 Previously we have been learning about how to use R to do basic numerical analysis, work with datatables and generate charts.

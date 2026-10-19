@@ -53,6 +53,17 @@ act as a type of "glue" to run complex workflows.
 ## Setting up your command line environment
 
 You will need access to a Linux (Ubuntu) command line interface for this workshop series.
+
+There are a few ways to do this:
+
+* Sign up for Burnet HPC.
+
+* If you have a Mac or Linux laptop, you will have a terminal or console that you can access.
+Just note that commands may behave a bit differently in MacOS, as compared to linux.
+Also, you will need to install ncbi-blast+ from NCBI [here](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html).
+
+* If you are using a Windows laptop, you can install WSL. Then Ubuntu or Debian can be installed from the app store.
+
 My recommendation is that we work on Burnet's shared computing cluster (HPC).
 The benefit of this is that those systems are administered by dedicated HPC staff, so they can
 help you resolve issues that you might encounter.
