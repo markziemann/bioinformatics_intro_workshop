@@ -270,7 +270,7 @@ First let's make a synthetic dataset.
 ```{r,mx1}
 
 nreps=5 # number of replicates per group
-nanalytes=20000 # number of proteins detected
+nanalytes=2000 # number of proteins detected
 nup=100 # number of overexpressed proteins.
 ndn=300 # number of downexpressed proteins.
 foldchange=2 # fold change of proteins
@@ -352,22 +352,22 @@ myrec <- length(which(myrec==TRUE))/length(myrec)
 
 ```
 
-Test 100 simulations with different set seeds.
+In order to test with different set seeds, we can make 2 functions.
+The first one simulates the dataset with the included fold changes
+and the second function runs the t-test, and reports the results.
 
-This is a more realistic application of parallel processing because each
-simulation takes a few seconds and we can execute them in parallel.
+```{r,test_seeds}
 
-```{r,parallel1}
-
-simdat <- function(nreps=5, nanalytes=20000, nup=100, ndn=300, mymean=1000,
-  mysd=100, foldchange=2, setseed=42){
+simdat <- function(nreps=3, nanalytes=2000, nup=100, ndn=300, mymean=1000,
+  mysd=200, foldchange=2, setseed=42){
   set.seed(setseed)
-  mx1 <- matrix(rnorm(n=nanalytes*10,mean=mymean,sd=mysd),ncol=nreps*2)
+  mx1 <- matrix(rnorm(n=nanalytes*nreps*2, mean = mymean, sd = mysd), ncol=nreps*2)
   colnames(mx1) <- c(paste("ctl",1:nreps,sep=""), paste("trt",1:nreps,sep=""))
   rownames(mx1) <- paste("prot",sprintf('%0.5d', 1:nanalytes),sep="")
   ups <- sample(x=1:nrow(mx1),size=nup,replace=FALSE)
   dns <- sample(x=setdiff(1:nrow(mx1),ups),size=ndn,replace=FALSE)
   trt <- mx1[,(nreps+1):(nreps*2)]
+
   trt[ups,] <- trt[ups,] * foldchange
   trt[dns,] <- trt[dns,] * 1 / foldchange
   ctl <- mx1[,1:nreps]
@@ -376,14 +376,13 @@ simdat <- function(nreps=5, nanalytes=20000, nup=100, ndn=300, mymean=1000,
   return(out)
 }
 
-tic()
-res1 <- lapply(1:3,function(i) {
-  seed=i*100
-  dat <- simdat(setseed=seed)
+test_and_report <- function(dat,seed) {
   ups <- dat[[1]]
   dns <- dat[[2]]
   mx <- dat[[3]]
-  mytres <- myttest(mx=mx,nctl=5,ntrt=5)
+  nctl <- length(grep("ctl",colnames(mx)))
+  ntrt <- length(grep("trt",colnames(mx)))
+  mytres <- myttest(mx=mx,nctl=nctl,ntrt=ntrt)
   myups <- which(rownames(mx2) %in% rownames(subset(mytres,fdr<0.05 & log2FC>0)))
   mydns <- which(rownames(mx2) %in% rownames(subset(mytres,fdr<0.05 & log2FC<0)))
   myprec <- c(myups %in% ups, mydns %in% dns)
@@ -392,36 +391,66 @@ res1 <- lapply(1:3,function(i) {
   myrec <- length(which(myrec==TRUE))/length(myrec)
   res = c("seed"=seed,"precision"=myprec,"recall"=myrec)
   return(res)
+}
+
+tic()
+
+res3 <- lapply(1:3,function(i) {
+  seed = i * 100
+  dat <- simdat(setseed=seed,nreps=3)
+  test_and_report(dat,seed=seed)
 })
+
 toc()
-res1
+
+res3
 
 ```
 
-Now execute 16 runs on 4 parallel threads
+Test whether 4 reps gives better results?
 
-Use the `parallel` package.
+```{r,four_reps}
+
+res4 <- lapply(1:3,function(i) {
+  seed = i * 100
+  dat <- simdat(setseed=seed,nreps=4)
+  test_and_report(dat,seed=seed)
+})
+
+res4
+
+```
+
+Can we save time with parallel processing?
+Run 10 jobs in series versus parallel.
+
+Use `detectCores()` to find out how many CPUs are available
+
+Use the `parallel` CRAN package.
+
+We'll use n=5 replicates for this test.
 
 ```{r,parallel2}
 
 tic()
-res2 <- mclapply(1:16,function(i) {
-  seed=i*100
-  dat <- simdat(setseed=seed)
-  ups <- dat[[1]]
-  dns <- dat[[2]]
-  mx <- dat[[3]]
-  mytres <- myttest(mx=mx,nctl=5,ntrt=5)
-  myups <- which(rownames(mx2) %in% rownames(subset(mytres,fdr<0.05 & log2FC>0)))
-  mydns <- which(rownames(mx2) %in% rownames(subset(mytres,fdr<0.05 & log2FC<0)))
-  myprec <- c(myups %in% ups, mydns %in% dns)
-  myprec <- length(which(myprec==TRUE))/length(myprec)
-  myrec <- c(ups %in% myups, dns %in% mydns)
-  myrec <- length(which(myrec==TRUE))/length(myrec)
-  res = c("seed"=seed,"precision"=myprec,"recall"=myrec)
-  return(res)
-},mc.cores=4)
+res4 <- lapply(1:10,function(i) {
+  seed = i * 100
+  dat <- simdat(setseed=seed,nreps=5)
+  test_and_report(dat,seed=seed)
+})
 toc()
+res4
+
+detectCores()
+
+tic()
+res2 <- mclapply(1:10,function(i) {
+  seed=i*100
+  dat <- simdat(setseed=seed,nreps=5)
+  test_and_report(dat,seed=seed)
+},mc.cores=10)
+toc()
+
 res2df <- data.frame(do.call(rbind,res2))
 res2df
 res2df$seed=NULL
@@ -437,9 +466,6 @@ boxplot(res2df,col="white",cex=0,ylab="Index")
 beeswarm(res2df,add=TRUE,pch=19,cex=1.8,col="black")
 
 ```
-
-Now repeat with more repeats and higher number of available CPU threads.
-Can you find out the optimum number of parallel threads for your system?
 
 ## Test your understanding - take home questions
 
