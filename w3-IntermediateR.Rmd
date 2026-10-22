@@ -23,7 +23,6 @@ library("beeswarm")
 
 ```
 
-
 ## Functional programming
 
 Functions are a key concept in computing.
@@ -266,13 +265,16 @@ For example we have some proteomics data with 2000 proteins and want to run a
 t-test.
 
 First let's make a synthetic dataset.
+You don't need to understand all the details here, just know that this chunk of
+code generates a synthetic omics dataset with a set number of replicates and
+known number of up and downregulated proteins with a known fold change.
 
 ```{r,mx1}
 
 nreps=5 # number of replicates per group
 nanalytes=2000 # number of proteins detected
-nup=100 # number of overexpressed proteins.
-ndn=300 # number of downexpressed proteins.
+nup=100 # number of overexpressed proteins
+ndn=300 # number of downexpressed proteins
 foldchange=2 # fold change of proteins
 setseed=42 # set seed so that results are repeatable
 set.seed(setseed)
