@@ -227,7 +227,7 @@ fcs_res <- fgsea(pathways = gs,
                   minSize  = 5,
                   maxSize  = 50000,
                   nPermSimple = 10000,
-                  nproc = 1)
+                  nproc = 4)
 
 fcs_res <- fcs_res[order(fcs_res$padj),]
 
