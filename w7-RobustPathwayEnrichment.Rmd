@@ -1,0 +1,338 @@
+---
+title: "Robust pathway enrichment analysis in R"
+author: "Mark Ziemann & Anusuiya Bora"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_width: 7
+    fig_height: 7
+theme: cosmo
+---
+
+Source: https://github.com/markziemann/pathway-workshop
+
+## Introduction
+
+The bioconductor packages we need this week are `DESeq2` and `fgsea`.
+The CRAN packages required are `kableExtra`, `eulerr`, `RhpcBLASctl` and `parallel`.
+
+```{r,libs}
+
+#knitr::opts_chunk$set(dev = 'svg') # set output device to svg
+
+suppressPackageStartupMessages({
+  library("getDEE2")
+  library("DESeq2")
+  library("kableExtra")
+  library("eulerr")
+  library("fgsea")
+  library("RhpcBLASctl")
+  library("parallel")
+})
+
+RhpcBLASctl::blas_set_num_threads(1)
+
+```
+
+Here we demonstrate how to do over-representation analysis (ORA) and functional class scoring (FCS).
+
+There are many possible pitfalls in pathway enrichment analysis which we summarised in a previous paper
+[Bora et al, 2026](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1014122).
+
+## Load DE data
+
+For information on the dataset we are using, see the script called "dataprep.Rmd" in another repository
+https://github.com/markziemann/pathway-workshop
+
+For this guide I will be using bulk RNA-seq data from a previous study, which is
+deposited at NCBI GEO and SRA under accession numbers: GSE55123 and SRP038101 (Lund et al, 2014).
+The experiment is designed to investigate the effect of Azacitidine treatment on AML3 cells.
+
+The raw data have been processed by the DEE2 project, and the summary gene expression counts are
+available at the dee2.io website, and programmatically with the getDEE2 bioconductor package
+(Ziemann et al, 2019).
+
+```{r,load}
+
+if ( ! file.exists("data/de.Rds") ) {
+  download.file("https://ziemann-lab.net/public/bioinfo_workshop/2026/de.Rds",destfile="data/de.Rds")
+}
+
+de <- readRDS("data/de.Rds")
+
+head(de) %>%
+  kbl(caption="To DEGs for Aza treatment in AML3 cells") %>%
+  kable_paper("hover", full_width = F)
+
+```
+
+## Get gene sets
+
+Gene sets were obtained from Reactome.
+Reactome is a good source for pathways. It is more comprehensive and frequently updated as compared to KEGG.
+
+```{r,reactome}
+
+if ( ! file.exists("data/ReactomePathways_2025-09-02.gmt") ) {
+  download.file("https://ziemann-lab.net/public/bioinfo_workshop/2026/ReactomePathways_2025-09-02.gmt",
+  destfile="data/ReactomePathways_2025-09-02.gmt")
+}
+
+gs <- gmtPathways("data/ReactomePathways_2025-09-02.gmt")
+
+head(gs,3)
+
+summary(unlist(lapply(gs,length)))
+
+```
+
+## ORA: Filter genes
+
+Here we select up and down-regulated genes as well as the background.
+The background was previously selected based on the presence of an
+average of 10 reads per sample.
+
+```{r,filter}
+
+up <- rownames(subset(de, padj < 0.01 & log2FoldChange > 0))
+up <- unique(sapply(strsplit(up," "),"[[",2))
+length(up)
+
+dn <- rownames(subset(de, padj < 0.01 & log2FoldChange < 0))
+dn <- unique(sapply(strsplit(dn," "),"[[",2))
+length(dn)
+
+# background selection was done earlier
+#mxf <- mx[which(rowMeans(mx)>=10),]
+dim(de)
+bg <- rownames(de)
+bg <- unique(sapply(strsplit(bg," "),"[[",2))
+length(bg)
+
+```
+
+Now we write the gene lists to text files that we can use for ORA with web tools like iDEP.
+
+```{r,write_gene_lists}
+
+writeLines(up,"data/up.txt")
+writeLines(dn,"data/down.txt")
+writeLines(bg,"data/background.txt")
+
+```
+
+## ORA: run the test with Reactome gene sets
+
+The goal is to understand whether certain gene pathways are enriched at a higher level in the
+DE list as compared to the background list of detected genes.
+
+We are running separate tests for up and down DEGs.
+
+First, up.
+
+```{r,ora_up1}
+
+ora_up <- fora(pathways=gs, genes=up, universe=bg, minSize = 5, maxSize = Inf)
+nrow(ora_up)
+message("number of up-regulated gene sets with FDR<0.01")
+nrow(subset(ora_up,padj<0.01))
+
+head(ora_up,10) %>%
+  kbl(caption="Top upregulated pathways with ORA (significance)") %>%
+  kable_paper("hover", full_width = F)
+
+ora_up <- ora_up[order(-ora_up$foldEnrichment),]
+
+head(ora_up,10) %>%
+  kbl(caption="Top upregulated pathways with ORA (fold enrichment)") %>%
+  kable_paper("hover", full_width = F)
+
+```
+
+Next, down.
+
+```{r,ora_dn1}
+
+ora_dn <- fora(pathways=gs, genes=dn, universe=bg, minSize = 5, maxSize = Inf)
+nrow(ora_dn)
+message("number of down-regulated gene sets with FDR<0.01")
+nrow(subset(ora_dn,padj<0.01))
+
+head(ora_dn,10) %>%
+  kbl(caption="Top downregulated pathways with ORA (significance)") %>%
+  kable_paper("hover", full_width = F)
+
+ora_dn <- ora_dn[order(-ora_dn$foldEnrichment),]
+
+head(ora_dn,10) %>%
+  kbl(caption="Top dnregulated pathways with ORA (fold enrichment)") %>%
+  kable_paper("hover", full_width = F)
+
+```
+
+Barplot
+
+```{r,ora_barplot}
+
+npw=15
+ora_up_vals <- head(ora_up$foldEnrichment,15)
+names(ora_up_vals) <- head(ora_up$pathway,15)
+
+ora_dn_vals <- head(ora_dn$foldEnrichment,15)
+names(ora_dn_vals) <- head(ora_dn$pathway,15)
+
+myvals <- c(ora_dn_vals,rev(ora_up_vals))
+
+names(myvals) <- ifelse(nchar(names(myvals)) > 53, paste0(strtrim(names(myvals), 50), '...'), names(myvals))
+
+par(mar=c(5.1,25.1,4.1,2.1))
+
+mycols <- c( rep("blue",length(ora_dn_vals)) , rep("red",length(ora_up_vals)) )
+
+barplot(myvals, col=mycols,
+  horiz=TRUE,las=2,xlab="Fold enrichment",main="Effect of Aza treatment")
+mtext("Red=up, Blue=down")
+
+par(mar=c(5.1,4.1,4.1,2.1))
+
+```
+
+## Functional class scoring
+
+We will rank the genes based on the "stat" value from DESeq2, which is the Wald test statistic.
+
+First step is to remove redundant gene symbols (there are 4).
+
+```{r,fcs1,message = FALSE}
+
+de2 <- de
+
+de2$gene <- sapply(strsplit(rownames(de)," "),"[[",2)
+
+which(duplicated(de2$gene))
+
+de2ag <- aggregate(de2, stat ~ gene, FUN=sum)
+
+destat <- de2ag$stat
+names(destat) <- de2ag$gene
+
+head(destat)
+
+fcs_res <- fgsea(pathways = gs,
+                  stats    = destat,
+                  minSize  = 5,
+                  maxSize  = 50000,
+                  nPermSimple = 10000,
+                  nproc = 1)
+
+fcs_res <- fcs_res[order(fcs_res$padj),]
+
+```
+
+Now let's take a look at the top results based on statistical significance.
+
+```{r,fcs2}
+
+head( subset(fcs_res,ES>0) , 10) %>%
+  kbl(caption="Top upregulated pathways with FCS (significance)") %>%
+  kable_paper("hover", full_width = F)
+
+head( subset(fcs_res,ES<0) , 10) %>%
+  kbl(caption="Top downregulated pathways with FCS (significance)") %>%
+  kable_paper("hover", full_width = F)
+
+```
+
+Now let's take a look at the results based on ES after removal of nonsignificant sets.
+
+```{r,fcs3}
+
+sig <- subset(fcs_res,padj<0.01)
+
+fcs_up <- tail(sig[order(sig$ES),],15)
+
+fcs_up %>%
+  kbl(caption="Top upregulated pathways with FCS (ES prioritisation)") %>%
+  kable_paper("hover", full_width = F)
+
+fcs_dn <- head(sig[order(sig$ES),],15)
+
+fcs_dn %>%
+  kbl(caption="Top downregulated pathways with FCS (ES prioritisation)") %>%
+  kable_paper("hover", full_width = F)
+
+```
+
+Now make a barplot.
+
+```{r,fcs_barplot}
+
+fcs_vals <- c(fcs_dn$ES, fcs_up$ES)
+names(fcs_vals) <- c(fcs_dn$pathway, fcs_up$pathway)
+
+names(fcs_vals) <- ifelse(nchar(names(fcs_vals)) > 53, paste0(strtrim(names(fcs_vals), 50), '...'), names(fcs_vals))
+
+par(mar=c(5.1,24.1,4.1,2.1))
+
+barplot(fcs_vals, horiz=TRUE,las=2,xlab="ES",main="Effect of Aza treatment")
+
+par(mar=c(5.1,4.1,4.1,2.1))
+
+```
+
+## Compare ORA and FCS approaches
+
+```{r,euler}
+
+ora_sig_up <- subset(ora_up,padj<0.01)$pathway
+ora_sig_dn <- subset(ora_dn,padj<0.01)$pathway
+
+fcs_sig_up <- subset(fcs_res,ES>0 & padj<0.01)$pathway
+fcs_sig_dn <- subset(fcs_res,ES<0 & padj<0.01)$pathway
+
+v1 <- list("ORA up"=ora_sig_up, "ORA down"=ora_sig_dn,
+  "FCS up"=fcs_sig_up, "FCS down"=fcs_sig_dn)
+
+plot(euler(v1),quantities = list(cex = 2), labels = list(cex = 2))
+
+```
+
+Set analysis.
+
+```{r,set_analysis1}
+
+message("Common upregulated")
+intersect(ora_sig_up, fcs_sig_up)
+
+message("Common downregulated")
+intersect(ora_sig_dn, fcs_sig_dn)
+
+```
+
+Enrichment plot.
+
+```{r,eplot}
+
+mypw <- gs[which(names(gs) %in% fcs_dn$pathway)]
+
+plotGseaTable(mypw, destat, fcs_res, gseaParam = 0.5)
+
+```
+
+## Prioritisation
+
+Preferably, prioritise results based on the enrichment score after excluding gene sets with FDR>0.05.
+Prioritisation based on p-value can lead to over-emphasis on large and generic gene sets like "translation",
+"mitochondria fuinction", or "immune system".
+
+## Session information
+
+```{r,session}
+
+sessionInfo()
+save.image("data/session2.Rdata")
+
+```
