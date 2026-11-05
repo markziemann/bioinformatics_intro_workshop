@@ -1,0 +1,173 @@
+---
+title: "Workshop 8: Introduction to multi-omics analysis in R"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: simplex
+    toc: true
+    code_folding: show
+    fig_width: 7
+    fig_height: 7
+    toc_float:
+      collapsed: true
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+Original Source: https://github.com/markziemann/mitch_example_workflows
+
+
+# Introduction
+
+Six male participants underwent 1 hr endurance exercise (~70% VO2 peak) with skeletal muscle
+biopsy before and immediately after exercise.
+These skeletal muscle samples underwent mRNA-seq, and ChIP-seq for H3K9/K14ac and H3K36ac.
+The goal is to understand the coordination between RNA expression and histone acetylation,
+and also to characterise the pathway expression changes.
+Gene expression was quantified using STAR uniquely mapped reads and promoter based histone
+acetylation changes were quantified by read counting within 3 kbp of the TSS.
+In this analysis we will perform correlation analysis between these omics and conduct a
+multivariate REACTOME pathway enrichment analysis.
+
+```{r,install,eval = FALSE}
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("mitch")
+
+```
+
+```{r,libs}
+
+library("mitch")
+library("eulerr")
+library("kableExtra")
+
+```
+
+## Obtain REACTOME gene sets
+
+```{r,genesets}
+
+if ( ! file.exists("data/ReactomePathways_2025-09-02.gmt") ) {
+  download.file("https://ziemann-lab.net/public/bioinfo_workshop/2026/ReactomePathways_2025-09-02.gmt",
+  destfile="data/ReactomePathways_2025-09-02.gmt")
+}
+
+gs <- gmt_import("data/ReactomePathways_2025-09-02.gmt")
+
+head(gs,3)
+
+```
+
+## Get omics data
+
+DE analysis has already been done.
+But let's look at the MDS plots.
+Check http://10.11.41.249/public/exercise_histone/
+
+```{r,fetchdata}
+
+K9URL="https://raw.githubusercontent.com/markziemann/bioinformatics_intro_workshop/refs/heads/2026/data/k9a.tsv"
+K36URL="https://raw.githubusercontent.com/markziemann/bioinformatics_intro_workshop/refs/heads/2026/data/k36a.tsv"
+RNAURL="https://raw.githubusercontent.com/markziemann/bioinformatics_intro_workshop/refs/heads/2026/data/rna.tsv"
+
+```
+
+## Import differential expression data
+
+```{r,mds,fig.width=6,fig.height=6}
+
+if ( ! file.exists("data/k9a.tsv") ) {
+  download.file(K9URL,"k9a.tsv")
+}
+
+if ( ! file.exists("data/k36a.tsv") ) {
+  download.file(K36URL,"k35a.tsv")
+}
+
+if ( ! file.exists("data/rna.tsv") ) {
+  download.file(RNAURL,"rna.tsv")
+}
+
+
+rna <- read.table("data/rna.tsv",header=TRUE,row.names = 1)
+head(rna)
+
+k9a <- read.table("data/k9a.tsv",header=TRUE,row.names = 1)
+head(k9a)
+
+k36a <- read.table("data/k36a.tsv",header=TRUE,row.names = 1)
+head(k36a)
+
+```
+
+## Euler diagrams
+
+```{r,euler}
+
+rna_up <- rownames(subset(rna,adj.p.value<0.05 & logFC > 0))
+rna_dn <- rownames(subset(rna,adj.p.value<0.05 & logFC < 0))
+
+k9a_up <- rownames(subset(k9a,adj.p.value<0.05 & logFC > 0))
+k9a_dn <- rownames(subset(k9a,adj.p.value<0.05 & logFC < 0))
+
+k36a_up <- rownames(subset(k36a,adj.p.value<0.05 & logFC > 0))
+k36a_dn <- rownames(subset(k36a,adj.p.value<0.05 & logFC < 0))
+
+xl <- list("RNA up"=rna_up, "RNA dn"=rna_dn,
+  "K9a up"=k9a_up, "K9a dn"=k9a_dn,
+  "K36a up"=k36a_up, "K36a dn"=k36a_dn )
+
+plot(euler(xl),quantities = list(cex = 2), labels = list(cex = 2))
+
+v1 <- list("RNA up"=rna_up, "K9a up"=k9a_up, "K36a up"=k36a_up)
+
+plot(euler(v1),quantities = list(cex = 2), labels = list(cex = 2))
+
+v2 <- list("RNA dn"=rna_dn, "K9a dn"=k9a_dn, "K36a dn"=k36a_dn)
+
+plot(euler(v2),quantities = list(cex = 2), labels = list(cex = 2))
+
+```
+## Mitch import
+
+This combines the DE data into a single metric, good for comparing across contrasts.
+
+```{r,import,fig.height=8,fig.width=8}
+
+x <- list("rna"=rna,"k9a"=k9a,"k36a"=k36a)
+xx <- mitch_import(x = x,DEtype = "edger")
+
+head(xx)
+dim(xx)
+cor(xx)
+cor(xx,method="spearman")
+
+```
+
+## Perform enrichment analysis
+
+```{r,enrichment}
+
+res <- mitch_calc(x = xx,genesets = gs, priority = "effect",cores=4, resrows=10)
+
+head(res$enrichment_result,30) %>%
+  kbl(caption="Top pathways by Enrichment Score") %>%
+  kable_paper("hover", full_width = F)
+
+if ( file.exists("exercise_reactome_report.html") ) {
+  unlink("exercise_reactome_report.html")
+}
+mitch_report(res = res, outfile = "exercise_reactome_report.html")
+
+```
+
+## Session Information
+
+```{r,sessioninfo}
+
+sessionInfo()
+
+```
