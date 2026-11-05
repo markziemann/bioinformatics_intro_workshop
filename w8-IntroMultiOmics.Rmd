@@ -7,8 +7,8 @@ output:
     theme: simplex
     toc: true
     code_folding: show
-    fig_width: 7
-    fig_height: 7
+    fig_width: 5
+    fig_height: 5
     toc_float:
       collapsed: true
 ---
