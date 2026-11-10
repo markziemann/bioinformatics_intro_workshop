@@ -1,0 +1,445 @@
+---
+title: "Workshop 9: Pathogen sequence analysis and variant calling"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: simplex
+    toc: true
+    code_folding: show
+    fig_width: 5
+    fig_height: 5
+    toc_float:
+      collapsed: true
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+## Introduction
+
+Here we will be focusing on prokaryote genome assembly and pangenome analysis.
+This will show us the similarities and differences between bacterial isolates,
+focusing on gene presence/absence which is generally more important than
+characterisation of SNVs between isolates.
+
+The general steps for short reads are:
+
+1. Sequence QC
+
+2. Assembly with Unicycler
+
+3. Genome annotation with Prokka
+
+4. Pangenome analysis with Roary
+
+5. Downstream analysis
+
+For sequence of individual viral genomes, you might want to try a different pipeline:
+
+1. Sequence QC with FastQC
+
+2. Map reads to reference genome with bwa/minibwa generating SAM files
+
+3. Convert the SAM to BAM with SamTools
+
+4. Generate mpileup file and call variants using BCFtools
+
+## Prerequisites
+
+I'm working on a server with Ubuntu 22.04.5 LTS or higher LTS installed.
+
+Packages needed are `fastqc`, `multiqc`, `unicycler`, `roary`.
+
+If you want to run jobs in parallel, then it is recommended to install GNU parallel as well.
+
+We will also need conda to install `prokka`.
+
+```{bash,install,eval = FALSE}
+sudo apt install fastqc multiqc unicycler prokka
+sudo apt install parallel
+```
+
+## Tmux: a recommendation
+
+Wherever possible, you should be using `tmux` to manage your sessions as
+this workflow has some long running steps.
+
+A reminder on how to use it
+
+```{bash,tmuxuse,eval=FALSE}
+# new session
+tmux new -s patho
+# disconnect session
+tmux detach
+# re-attach
+tmux attach -t patho
+# emergency kill
+tmux kill-session -t patho
+```
+
+## Download a copy of the data
+
+Location: https://ziemann-lab.net/public/bioinfo_workshop/2026/pathogen_seq/rawdata/
+
+These are real Salmonella enterica datasets from clinical samples and from environmental samples
+like poultry farms.
+
+Some of this data has been published [here](https://www.sciencedirect.com/org/science/article/pii/S2165049722007454).
+
+```{bash,seqdl,eval=FALSE}
+if [ ! -d rawdata ] ; then
+  DIRURL=https://ziemann-lab.net/public/bioinfo_workshop/2026/pathogen_seq/rawdata
+  mkdir rawdata
+  cd rawdata
+  wget -N $DIRURL/100346_R1.fq.gz
+  wget -N $DIRURL/100346_R2.fq.gz
+  wget -N $DIRURL/100347_R1.fq.gz
+  wget -N $DIRURL/100347_R2.fq.gz
+  wget -N $DIRURL/100348_R1.fq.gz
+  wget -N $DIRURL/100348_R2.fq.gz
+  wget -N $DIRURL/100349_R1.fq.gz
+  wget -N $DIRURL/100349_R2.fq.gz
+  cd -
+fi
+
+du -sh rawdata/*
+```
+
+## Run Quality control analysis
+
+I like to use [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
+for basic sequence quality control and then [MultiQC](https://github.com/MultiQC/MultiQC)
+for assembling all the reports into one convenient page.
+
+Here is the script that I use called `run_fastqc.sh`.
+As you can see there is a version that runs one fastqc job at a time, and another
+that uses GNU parallel to run 4 jobs at once, each with up to 4 threads.
+
+Use `top` to monitor how CPU resources are being used.
+
+Do not exceed the number of CPU threads on your system.
+
+```{bash,qc1,eval=FALSE}
+#!/bin/bash
+
+# run fastqc on the fastq files
+# FastQC v0.11.5
+for FQZ in *.fq.gz ; do
+  echo $FQZ
+  fastqc -t 4 $FQZ
+done
+
+# get it done 4x faster
+#ls *fq.gz | parallel -j4 fastqc -t4 {}
+
+# multiqc, version 1.7
+multiqc .
+```
+
+When this script runs, you will see stderr from fastQC and then from multiQC,
+telling you whether it has completed successfully.
+
+You will also see insdividual QC reports for each fastq file.
+These are not very helpful, as there are so many.
+It is preferred to use multiQC to aggregate the findings into a single report.
+
+If you are running this analysis on your own laptop, you will be able to open up
+the html and view the results.
+If you are using a workstation or HPC via ssh, then you will need to copy the data
+to your local system first.
+
+You can see the report that I prepared previously [here](https://ziemann-lab.net/public/bioinfo_workshop/2026/pathogen_seq/multiqc_report.html).
+
+What we want to look for is:
+
+* Total sequence output/coverage - should be 30 genome coverage at least
+
+* Unique vs duplicated reads - duplicated reads are not informative
+
+* Sequence quality along the read length - any sudden drops or anomalies
+
+* GC content smooth - deviations from bell curve could suggest problems in library prep
+
+* Sequence duplication - presence of contaminating sequences
+
+* Adapter content - adapters could reduce the assembly performance
+
+## Assembly
+
+Here we are using [Unicycler](https://github.com/rrwick/Unicycler) to guide the assembly of short reads.
+
+I like to create a new folder called `assembly` and link the fastq files there with `ln -s origin destination`.
+
+Here is the script that I call `run_unicycler.sh`:
+
+```{bash,unicycler,eval=FALSE}
+#!/bin/bash
+
+#unicycler -1 short_reads_1.fastq.gz -2 short_reads_2.fastq.gz -o output_dir
+#unicycler  -1 100346_R1.fq.gz  -2 100346_R2.fq.gz  -o 100346
+
+for FQZ1 in *_R1.fq.gz ; do
+  FQZ2=$(echo $FQZ1 | sed 's/_R1.fq.gz/_R2.fq.gz/' )
+  PFX=$(echo $FQZ1 | cut -d '_' -f1)
+  echo $FQZ1 $FQZ2 $PFX
+  unicycler  -1 $FQZ1 -2 $FQZ2  -o $PFX
+done
+```
+
+Unicycler is a bit slow, so we won't be able to run all 4 assemblies in the workshop session.
+
+But the assembly data have been uploaded for you to use [here](https://ziemann-lab.net/public/bioinfo_workshop/2026/pathogen_seq/assembly/).
+
+We should inspect contigs generated.
+
+```
+zgrep '>' 100346/assembly.fasta.gz
+```
+
+You will see that there is a circular contig:
+
+```
+>48 length=11069 depth=3.63x circular=true
+```
+
+You may also see sequences that are amplified:
+
+```
+>70 length=1295 depth=14.37x
+```
+
+Which could be a repetitive element or a prophage.
+
+Contigs can be extracted
+
+```
+samtools faidx assembly.fasta 48
+samtools faidx assembly.fasta 70
+```
+
+Further quality control of assemblies is recommended using [QUAST](https://github.com/ablab/quast)
+which will calculate N50 and a range of other quality metrics.
+
+## Genome annotation with Prokka
+
+Prokka is a program for rapid prokaryotic genome annotation.
+
+```{bash,prokka_setup_conda,eval=FALSE}
+conda deactivate
+conda create -n prokka bioconda::prokka
+conda activate prokka
+prokka --version
+```
+
+There is a bug in this version which can be fixed using nano:
+
+```{bash,dumb_bug_fix,eval=FALSE}
+nano /home/mark.ziemann@domain.internal.burnet.edu.au/miniconda3/envs/prokka/bin/prokka
+```
+
+Change this section:
+
+```
+  'blastp' => {
+    GETVER  => "blastp -version",
+    REGEXP  => qr/blastp:\s+($BIDEC)/,
+    MINVER  => "2.2",
+    NEEDED  => 1,
+  },
+```
+
+So it looks like this:
+
+```
+  'blastp' => {
+    GETVER  => "blastp -version",
+    REGEXP  => qr/blastp:\s+($BIDEC)/,
+    MINVER  => "2.12",
+    NEEDED  => 1,
+  },
+```
+
+And the same for makeblastdb.
+
+Then we can use the script `run_prokka.sh`.
+
+```{bash,run_prokka,eval=FALSE}
+#!/bin/bash
+for FA in *fa ; do
+  PFX=$(echo $FA | sed 's/.fa//')
+  echo $PFX
+  prokka --force --outdir $PFX --genus Salmonella --species enterica --kingdom Bacteria  $FA
+done
+```
+
+You will get the following files appearig in your output folder:
+
+```
+.
+|-- PROKKA_11102026.err
+|-- PROKKA_11102026.faa
+|-- PROKKA_11102026.ffn
+|-- PROKKA_11102026.fna
+|-- PROKKA_11102026.fsa
+|-- PROKKA_11102026.gbk
+|-- PROKKA_11102026.gff
+|-- PROKKA_11102026.log
+|-- PROKKA_11102026.sqn
+|-- PROKKA_11102026.tbl
+|-- PROKKA_11102026.tsv
+`-- PROKKA_11102026.txt
+```
+
+Let us take a look at the gff file.
+
+```
+##gff-version 3
+##sequence-region 0 1 163
+##sequence-region 4 1 158
+##sequence-region 8 1 908
+##sequence-region 12 1 241
+##sequence-region 13 1 194
+##sequence-region 14 1 241
+...
+8       Prodigal:2.6    CDS     61      207     .       -       0       ID=FEOHIGPL_00001;inference=ab initio prediction:Prodigal:2.6;locus_tag=FEOHIGPL_00001;product=hypothetical protein
+8       Prodigal:2.6    CDS     204     815     .       -       0       ID=FEOHIGPL_00002;inference=ab initio prediction:Prodigal:2.6,similar to AA sequence:NC_003198.gb:NP_455514.1;locus_tag=FEOHIGPL_00002;product=bacteriophage lambda protein NinG
+15      Prodigal:2.6    CDS     1       315     .       -       0       ID=FEOHIGPL_00003;inference=ab initio prediction:Prodigal:2.6;locus_tag=FEOHIGPL_00003;product=hypothetical protein
+27      Prodigal:2.6    CDS     973     1170    .       +       0       ID=FEOHIGPL_00004;inference=ab initio prediction:Prodigal:2.6;locus_tag=FEOHIGPL_00004;product=hypothetical protein
+27      Prodigal:2.6    CDS     1381    3657    .       -       0       ID=FEOHIGPL_00005;inference=ab initio prediction:Prodigal:2.6,similar to AA sequence:NC_003198.gb:NP_455435.1;locus_tag=FEOHIGPL_00005;product=ATP-dependent Clp protease ATP-binding subunit ClpA
+27      Prodigal:2.6    CDS     3688    4008    .       -       0       ID=FEOHIGPL_00006;inference=ab initio prediction:Prodigal:2.6,similar to AA sequence:NC_003198.gb:NP_455434.1;locus_tag=FEOHIGPL_00006;product=ATP-dependent Clp protease adaptor protein
+```
+
+## Run pangenome analysis with Roary
+
+I have prepared some Prokka annotation files available [here](https://ziemann-lab.net/public/bioinfo_workshop/2026/pathogen_seq/annotations/).
+
+You can download those and run the following command to kick-off the pangenome analysis.
+
+```
+roary -p 8 -e -n -v -f roary_output *gff
+```
+
+The output directory should have the following
+
+```
+.
+├── accessory_binary_genes.fa
+├── accessory_binary_genes.fa.newick
+├── accessory_graph.dot
+├── accessory.header.embl
+├── accessory.tab
+├── blast_identity_frequency.Rtab
+├── clustered_proteins
+├── core_accessory_graph.dot
+├── core_accessory.header.embl
+├── core_accessory.tab
+├── core_alignment_header.embl
+├── core_gene_alignment.aln
+├── gene_presence_absence.csv
+├── gene_presence_absence.Rtab
+├── number_of_conserved_genes.Rtab
+├── number_of_genes_in_pan_genome.Rtab
+├── number_of_new_genes.Rtab
+├── number_of_unique_genes.Rtab
+├── pan_genome_reference.fa
+└── summary_statistics.txt
+
+1 directory, 20 files
+```
+
+The summary_statistics.txt shows the number of core and accessory genes.
+
+The newick tree can be pasted into online tree viewers like [this one](https://etetoolkit.org/treeview/)
+This shows the relative similarity of gene sets across isolates.
+
+The `gene_presence_absence.Rtab` file is another interesting one that shows the gene presence and
+absence across isolated.
+
+Here is how we can visualise the gene presence and absence using a heatmap in R.
+
+```{r,read_rtab,eval=FALSE}
+library("gplots")
+
+x <- read.table("gene_presence_absence.Rtab",header=TRUE)
+dim(x)
+
+mx <- as.matrix(head(x,1000))
+
+colfunc <- colorRampPalette(c("blue", "white", "red"))
+
+colnames(mx) <- sapply(strsplit(colnames(mx),"_"),"[[",1)
+
+heatmap.2( mx , col=colfunc(25),scale="none",
+    trace="none",margins = c(6,6),
+    cexRow=0.4, cexCol=0.5,
+    main="Gene presence/absence")
+```
+
+## Running a core gene alignment
+
+This is not normally required, but here is how to do it.
+First extract the core genes of interest.
+
+This is a script called `extract_prot.sh` which outputs protein sequences
+to the stdout.
+
+```
+#!/bin/bash
+#aroC|dnaN|hemD|hisD|purE|sucA|thrA
+
+for GFF in */*.gff ; do
+
+  ISOLATE=$(echo $GFF | cut -d '/' -f1)
+  FAA=$(echo $GFF | sed 's/.gff/.faa/')
+
+  perl unwrap_fasta.pl $FAA - > tmp && mv tmp $FAA
+
+  echo $ISOLATE >&2
+
+  for GENE in aroC dnaN hemD hisD purE sucA thrA  ; do
+
+    GENECNT=$(grep -wc $GENE $GFF)
+
+    echo $GENE >&2
+
+    if [ $GENECNT -gt 0 ] ; then
+
+      LOCTAG=$(grep -w $GENE $GFF | sed 's/locus_tag=/@/' \
+      | cut -d '@' -f2 | cut -d ';' -f1)
+
+      SEQNAME=${GENE}_${ISOLATE}
+      grep -A1 $LOCTAG $FAA | paste - - | cut -f2 \
+      | sed "s/^/>${SEQNAME}\t/" | tr '\t' '\n'
+
+    fi
+  done
+done
+```
+
+It is used like this:
+
+```
+ ./extract_prot.sh > protein.fa
+```
+
+Then we can use another script to conduct the clustal alignment:
+
+```
+for GENE in aroC dnaN hemD hisD purE sucA thrA ; do
+
+  grep -A1 $GENE protein.fa | grep -v '\--' > $GENE.fa
+
+  clustalo -i $GENE.fa -o $GENE.aln --guidetree-out=${GENE}.tree  --outfmt=clustal -v --force
+
+done
+```
+
+In our case, there were only a few SNPs observed in these core genes, so it wasn't informative.
+
+## Session Information
+
+```{r,sessioninfo}
+
+sessionInfo()
+
+```
