@@ -1,0 +1,52 @@
+---
+title: "Workshop 10: Introduction to data analysis in Python"
+author: "Burnet Bioinformatics Group"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: simplex
+    toc: true
+    code_folding: show
+    fig_width: 7
+    fig_height: 7
+    toc_float:
+      collapsed: true
+---
+
+Source: https://github.com/markziemann/bioinformatics_intro_workshop
+
+![Image credit: Steven Lokwan.](images/Header-Image-crop-1024x559.jpg)
+
+## Getting started
+
+We will begin with trying out Seaborn, whichis good for making dataframes, plots, etc.
+
+```{bash,venv}
+
+#conda deactivate
+#conda create -n my_env python=3.13 seaborn -c conda-forge
+
+conda activate my_env
+
+#conda deactivate
+
+```
+
+
+
+
+
+
+```{python,start}
+
+import seaborn as sns
+df = sns.load_dataset('tips')
+print(df.head())
+
+import seaborn as sns
+df2 = sns.load_dataset('titanic')
+print(df2.head())
+
+
+
+```
